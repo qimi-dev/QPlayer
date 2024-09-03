@@ -37,7 +37,8 @@ kotlin {
 }
 
 dependencies {
-
+    compileOnly(libs.android.gradlePlugin)
+    compileOnly(libs.kotlin.gradlePlugin)
 }
 
 tasks {
@@ -49,6 +50,13 @@ tasks {
 
 gradlePlugin {
     plugins {
-
+        register("androidApplication") {
+            id = "qplayer.android.application"
+            implementationClass = "AndroidApplicationConventionPlugin"
+        }
+        register("androidApplicationCompose") {
+            id = "qplayer.android.application.compose"
+            implementationClass = "AndroidApplicationComposeConventionPlugin"
+        }
     }
 }
