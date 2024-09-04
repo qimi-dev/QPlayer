@@ -58,5 +58,9 @@ gradlePlugin {
             id = "qplayer.android.application.compose"
             implementationClass = "AndroidApplicationComposeConventionPlugin"
         }
+        register("hilt") {
+            id = "qplayer.hilt"
+            implementationClass = "HiltConventionPlugin"
+        }
     }
 }

@@ -1,6 +1,7 @@
 plugins {
     id("qplayer.android.application")
     id("qplayer.android.application.compose")
+    id("qplayer.hilt")
 }
 
 android {
