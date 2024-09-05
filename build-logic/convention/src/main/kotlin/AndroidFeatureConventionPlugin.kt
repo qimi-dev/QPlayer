@@ -13,6 +13,10 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
                 apply("qplayer.android.library")
                 apply("qplayer.hilt")
             }
+
+            dependencies {
+                add("implementation", libs.findLibrary("androidx-hilt-navigation-compose").get())
+            }
         }
     }
 

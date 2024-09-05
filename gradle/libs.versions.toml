@@ -11,8 +11,12 @@ composeBom = "2024.04.01"
 jetbrainsKotlinJvm = "1.9.0"
 androidGradlePlugin = "8.4.0"
 androidxNavigation = "2.8.0-beta06"
+androidxHiltNavigationCompose = "1.2.0"
 ksp = "2.0.0-1.0.21"
 hilt = "2.51.1"
+appcompat = "1.7.0"
+material = "1.10.0"
+retrofit = "2.11.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -31,9 +35,14 @@ androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "androidGradlePlugin" }
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
-androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "androidxNavigation" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "androidxNavigation" }
+androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "androidxHiltNavigationCompose" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -43,3 +52,13 @@ jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrai
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+
+qplayer-android-application = { id = "qplayer.android.application", version = "unspecified" }
+qplayer-android-application-compose = { id = "qplayer.android.application.compose", version = "unspecified" }
+qplayer-android-library = { id = "qplayer.android.library", version = "unspecified" }
+qplayer-android-library-compose = { id = "qplayer.android.library.compose", version = "unspecified" }
+qplayer-hilt = { id = "qplayer.hilt", version = "unspecified" }
+qplayer-android-feature = { id = "qplayer.android.feature", version = "unspecified" }
+
+
+

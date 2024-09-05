@@ -1,7 +1,8 @@
+
 plugins {
-    id("qplayer.android.application")
-    id("qplayer.android.application.compose")
-    id("qplayer.hilt")
+    alias(libs.plugins.qplayer.android.application)
+    alias(libs.plugins.qplayer.android.application.compose)
+    alias(libs.plugins.qplayer.hilt)
 }
 
 android {
@@ -34,13 +35,6 @@ android {
         }
     }
 
-    kotlinOptions {
-        jvmTarget = "11"
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
-    }
 }
 
 dependencies {
@@ -48,6 +42,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
+
+    implementation(projects.feature.main)
+    implementation(projects.core.network)
 
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)

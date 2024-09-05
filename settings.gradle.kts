@@ -21,4 +21,8 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "QPlayer"
+
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 include(":app")
+include(":feature:main")
+include(":core:network")

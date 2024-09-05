@@ -66,5 +66,13 @@ gradlePlugin {
             id = "qplayer.android.library"
             implementationClass = "AndroidLibraryConventionPlugin"
         }
+        register("androidLibraryCompose") {
+            id = "qplayer.android.library.compose"
+            implementationClass = "AndroidLibraryComposeConventionPlugin"
+        }
+        register("androidFeature") {
+            id = "qplayer.android.feature"
+            implementationClass = "AndroidFeatureConventionPlugin"
+        }
     }
 }
