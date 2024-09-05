@@ -62,5 +62,9 @@ gradlePlugin {
             id = "qplayer.hilt"
             implementationClass = "HiltConventionPlugin"
         }
+        register("androidLibrary") {
+            id = "qplayer.android.library"
+            implementationClass = "AndroidLibraryConventionPlugin"
+        }
     }
 }
