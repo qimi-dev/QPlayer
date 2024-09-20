@@ -44,7 +44,6 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
 
     implementation(projects.feature.main)
-    implementation(projects.core.network)
 
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)

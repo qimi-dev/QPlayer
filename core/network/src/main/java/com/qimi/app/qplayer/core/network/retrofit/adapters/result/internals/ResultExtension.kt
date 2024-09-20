@@ -42,7 +42,6 @@ internal fun <T> Response<T>.toResult(call: Call<T>, paramType: Type): Result<T>
         if (isSuccessful) {
             body() ?: emptyBodyHandle(call, paramType)
         } else {
-            // TODO 服务器响应失败，构建失败信息
             throw HttpException(this)
         }
     }
