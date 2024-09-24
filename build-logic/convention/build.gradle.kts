@@ -74,5 +74,9 @@ gradlePlugin {
             id = "qplayer.android.feature"
             implementationClass = "AndroidFeatureConventionPlugin"
         }
+        register("jvmLibrary") {
+            id = "qplayer.jvm.library"
+            implementationClass = "JvmLibraryConventionPlugin"
+        }
     }
 }

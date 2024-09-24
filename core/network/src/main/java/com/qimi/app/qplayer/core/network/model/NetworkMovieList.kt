@@ -1,6 +1,7 @@
 package com.qimi.app.qplayer.core.network.model
 
 import com.google.gson.annotations.SerializedName
+import com.qimi.app.qplayer.core.model.data.MovieList
 
 
 data class NetworkMovieList(
@@ -18,3 +19,11 @@ data class NetworkMovieList(
     val list: List<NetworkMovie>
 )
 
+fun NetworkMovieList.asExternalModel() = MovieList(
+    code = code,
+    page = page,
+    pageCount = pageCount,
+    limit = limit,
+    total = total,
+    list = list.map { it.asExternalModel() }
+)

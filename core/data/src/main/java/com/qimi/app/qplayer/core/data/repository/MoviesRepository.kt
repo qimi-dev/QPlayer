@@ -1,12 +1,10 @@
 package com.qimi.app.qplayer.core.data.repository
 
-import com.qimi.app.qplayer.core.network.NetworkDataSource
-import javax.inject.Inject
+import com.qimi.app.qplayer.core.model.data.MovieList
+import com.qimi.app.qplayer.core.network.model.NetworkMovieList
 
-internal class MoviesRepository @Inject constructor(
-    private val networkSource: NetworkDataSource
-) {
+interface MoviesRepository {
 
-
+    suspend fun fetchMovieList(action: String): Result<MovieList>
 
 }
