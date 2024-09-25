@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -22,10 +23,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsControllerCompat
+import com.qimi.app.qplayer.core.ui.Player
+import com.qimi.app.qplayer.core.ui.PlayerState
+import com.qimi.app.qplayer.core.ui.rememberPlayerState
 import com.qimi.app.qplayer.navigation.QPlayerNavHost
 import com.qimi.app.qplayer.ui.theme.QPlayerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -57,5 +62,13 @@ internal fun QPlayerApp(
 ) {
     Box(modifier = modifier) {
         QPlayerNavHost()
+//        val playerState: PlayerState = rememberPlayerState()
+//        Player(
+//            modifier = Modifier.height(200.dp),
+//            state = playerState
+//        )
+//        LaunchedEffect(Unit) {
+//            playerState.play("https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8")
+//        }
     }
 }
