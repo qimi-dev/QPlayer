@@ -9,6 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import com.qimi.app.qplayer.core.model.data.Movie
 import com.qimi.app.qplayer.feature.main.navigation.MainRoute
 import com.qimi.app.qplayer.feature.main.navigation.mainScreen
+import com.qimi.app.qplayer.feature.main.navigation.navigateToMain
 import com.qimi.app.qplayer.feature.preview.navigation.PreviewRoute
 import com.qimi.app.qplayer.feature.preview.navigation.navigateToPreview
 import com.qimi.app.qplayer.feature.preview.navigation.previewScreen
@@ -30,7 +31,9 @@ fun QPlayerNavHost(
             onSearchMovie = navController::navigateToSearch,
             onPreviewMovie = navController::navigateToPreview
         )
-        previewScreen()
+        previewScreen(
+            onBackClick = navController::navigateUp
+        )
         searchScreen(
             onBackClick = navController::navigateUp,
             onPreviewMovie = navController::navigateToPreview

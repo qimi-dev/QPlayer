@@ -46,9 +46,8 @@ fun Player(
     state: PlayerState = rememberPlayerState(),
     playerController: @Composable BoxScope.(PlayerState) -> Unit = {}
 ) {
-
     val context: Context = LocalContext.current
-    Box(modifier = modifier.background(Color.Black)) {
+    Box(modifier = modifier) {
         AndroidView(
             factory = { PlayerView(context) },
             modifier = Modifier.fillMaxSize(),

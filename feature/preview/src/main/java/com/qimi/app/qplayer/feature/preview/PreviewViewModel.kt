@@ -69,6 +69,10 @@ class PreviewViewModel @Inject constructor(
         }
     }
 
+    fun stop() {
+        exoPlayer.stop()
+    }
+
     override fun onCleared() {
         exoPlayer.release()
     }

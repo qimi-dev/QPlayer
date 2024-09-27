@@ -1,31 +1,29 @@
 package com.qimi.app.qplayer
 
+import android.app.UiModeManager
+import android.content.Context
 import android.os.Bundle
-import android.util.Log
+import android.view.View
+import android.view.Window
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.qimi.app.qplayer.navigation.QPlayerNavHost
 import com.qimi.app.qplayer.ui.theme.QPlayerTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -40,8 +38,8 @@ class MainActivity : ComponentActivity() {
                     QPlayerApp(
                         modifier = Modifier
                             .fillMaxSize()
-                             .padding(innerPadding)
-                             .consumeWindowInsets(innerPadding)
+                            .padding(innerPadding)
+                            .consumeWindowInsets(innerPadding)
                     )
                 }
             }

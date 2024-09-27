@@ -1,25 +1,12 @@
 package com.qimi.app.qplayer.feature.preview
 
-import android.content.Context
-import android.util.Log
-import android.view.View
-import android.widget.TextView
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.VisibilityThreshold
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.expandIn
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.shrinkOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
@@ -28,7 +15,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowColumn
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -39,72 +25,54 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.KeyboardArrowUp
-import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.ElevatedFilterChip
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.text.HtmlCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.media3.common.MediaItem
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
 import com.qimi.app.qplayer.core.model.data.Movie
 import com.qimi.app.qplayer.core.ui.CompactPlayerController
 import com.qimi.app.qplayer.core.ui.Player
 import com.qimi.app.qplayer.core.ui.PlayerState
+import kotlinx.coroutines.delay
 
 @Composable
 internal fun PreviewRoute(
+    onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PreviewViewModel = hiltViewModel()
 ) {
     val previewUiState: PreviewUiState by viewModel.previewUiState.collectAsState()
     PreviewScreen(
         previewUiState = previewUiState,
-        onSelectIndex = viewModel::play,
         playerState = viewModel.playerState,
+        onPlay = viewModel::play,
+        onStop = viewModel::stop,
+        onBackClick = onBackClick,
         modifier = modifier
     )
 }
@@ -112,16 +80,35 @@ internal fun PreviewRoute(
 @Composable
 internal fun PreviewScreen(
     previewUiState: PreviewUiState,
-    onSelectIndex: (Int) -> Unit,
     playerState: PlayerState,
+    onPlay: (Int) -> Unit,
+    onStop: () -> Unit,
+    onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var isPlayerShow: Boolean by remember { mutableStateOf(true) }
+    BackHandler {
+        onStop()
+        isPlayerShow = false
+        onBackClick()
+    }
     Scaffold {
         Column(modifier = modifier.padding(it)) {
-            PlayerWindow(
-                playerState = playerState,
-                modifier = Modifier.fillMaxWidth().height(200.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .background(Color.Black)
+            ) {
+                if (isPlayerShow) {
+                    CompactPlayerWindow(
+                        playerState = playerState,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Spacer(modifier = Modifier.fillMaxSize())
+                }
+            }
             Spacer(modifier = Modifier.height(16.dp))
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -133,7 +120,7 @@ internal fun PreviewScreen(
                     MovieSelection(
                         movieUrls = previewUiState.movieUrls,
                         selectedIndex = previewUiState.selectedIndex,
-                        onSelectIndex = onSelectIndex
+                        onSelectIndex = onPlay
                     )
                 }
             }
@@ -142,7 +129,7 @@ internal fun PreviewScreen(
 }
 
 @Composable
-internal fun PlayerWindow(
+internal fun CompactPlayerWindow(
     playerState: PlayerState,
     modifier: Modifier = Modifier
 ) {
