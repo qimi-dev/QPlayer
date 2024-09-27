@@ -12,9 +12,15 @@ object MainRoute
 
 fun NavController.navigateToMain() = navigate(MainRoute)
 
-fun NavGraphBuilder.mainScreen(onMovieClick: (Movie) -> Unit) {
+fun NavGraphBuilder.mainScreen(
+    onSearchMovie: () -> Unit,
+    onPreviewMovie: (Movie) -> Unit
+) {
     composable<MainRoute> {
-        MainRoute(onMovieClick)
+        MainRoute(
+            onSearchMovie = onSearchMovie,
+            onPreviewMovie = onPreviewMovie
+        )
     }
 }
 

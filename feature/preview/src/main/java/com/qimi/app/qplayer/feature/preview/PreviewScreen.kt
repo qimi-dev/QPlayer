@@ -2,6 +2,10 @@ package com.qimi.app.qplayer.feature.preview
 
 import android.content.Context
 import android.util.Log
+import android.view.View
+import android.widget.TextView
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
@@ -23,8 +27,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowColumn
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,13 +37,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -59,18 +67,23 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.text.HtmlCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -78,78 +91,69 @@ import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.qimi.app.qplayer.core.model.data.Movie
+import com.qimi.app.qplayer.core.ui.CompactPlayerController
+import com.qimi.app.qplayer.core.ui.Player
+import com.qimi.app.qplayer.core.ui.PlayerState
 
 @Composable
 internal fun PreviewRoute(
-    movie: Movie,
     modifier: Modifier = Modifier,
     viewModel: PreviewViewModel = hiltViewModel()
 ) {
-    val movieWindowUiState by viewModel.movieWindowUiState.collectAsState()
+    val previewUiState: PreviewUiState by viewModel.previewUiState.collectAsState()
     PreviewScreen(
-        movie = movie,
-        onSelectUrl = viewModel::play,
-        movieWindowUiState = movieWindowUiState,
+        previewUiState = previewUiState,
+        onSelectIndex = viewModel::play,
+        playerState = viewModel.playerState,
         modifier = modifier
     )
 }
 
 @Composable
 internal fun PreviewScreen(
-    movie: Movie,
-    onSelectUrl: (String) -> Unit,
-    movieWindowUiState: MovieWindowUiState,
+    previewUiState: PreviewUiState,
+    onSelectIndex: (Int) -> Unit,
+    playerState: PlayerState,
     modifier: Modifier = Modifier
 ) {
     Scaffold {
         Column(modifier = modifier.padding(it)) {
-            MovieWindow(
-                movieWindowUiState = movieWindowUiState
+            PlayerWindow(
+                playerState = playerState,
+                modifier = Modifier.fillMaxWidth().height(200.dp)
             )
-            MovieDescription(
-                movie = movie,
-                onSelectUrl = onSelectUrl
-            )
+            Spacer(modifier = Modifier.height(16.dp))
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    MovieDescription(movie = previewUiState.movie)
+                }
+                item {
+                    MovieSelection(
+                        movieUrls = previewUiState.movieUrls,
+                        selectedIndex = previewUiState.selectedIndex,
+                        onSelectIndex = onSelectIndex
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-internal fun MovieWindow(
-    movieWindowUiState: MovieWindowUiState,
+internal fun PlayerWindow(
+    playerState: PlayerState,
     modifier: Modifier = Modifier
 ) {
-    val context: Context = LocalContext.current
-    val player: ExoPlayer = remember { ExoPlayer.Builder(context).build() }
-    LaunchedEffect(movieWindowUiState) {
-        when(movieWindowUiState) {
-            is MovieWindowUiState.Initial -> Unit
-            is MovieWindowUiState.Playing -> {
-                val mediaItem = MediaItem.fromUri(movieWindowUiState.url)
-                player.setMediaItem(mediaItem)
-                player.prepare()
-                player.play()
-            }
-        }
-    }
-    DisposableEffect(Unit) {
-        onDispose {
-            player.release()
-        }
-    }
-    // TODO 使用常见的横屏比例
-    Box(
+    Player(
+        state = playerState,
         modifier = modifier
-            .fillMaxWidth()
-            .height(220.dp)
     ) {
-        AndroidView(
-            factory = { PlayerView(context) },
-            modifier = Modifier.fillMaxSize(),
-            update = {
-                it.player = player
-                it.useController = false
-            }
+        CompactPlayerController(
+            state = playerState,
+            onFullscreen = {},
+            modifier = Modifier.fillMaxSize()
         )
     }
 }
@@ -157,39 +161,74 @@ internal fun MovieWindow(
 @Composable
 internal fun MovieDescription(
     movie: Movie,
-    onSelectUrl: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var expanded: Boolean by remember { mutableStateOf(false) }
-    val urls: List<Pair<String, String>> by remember {
-        derivedStateOf {
-            movie.urls
-                .split("#")
-                .map {
-                    val (first, second) = it.split("$")
-                    first to second
-                }
+    Column(
+        modifier = modifier.padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = movie.name,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1
+            )
+            Text(
+                text = movie.score,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.outline
+            )
+        }
+        if (movie.content.isNotEmpty()) {
+            val annotatedText = remember(movie) {
+                val spanned = HtmlCompat.fromHtml(movie.content, HtmlCompat.FROM_HTML_MODE_LEGACY)
+                val text = spanned.toString()
+                buildAnnotatedString { append(text) }
+            }
+            Text(
+                text = annotatedText,
+                modifier = Modifier
+                    .animateContentSize()
+                    .clickable(
+                        interactionSource = null,
+                        indication = null
+                    ) { expanded = !expanded },
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodyMedium,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = if (expanded) Int.MAX_VALUE else 1
+            )
         }
     }
-    var selectedIndex: Int by remember(urls) { mutableStateOf(0) }
-    LaunchedEffect(selectedIndex) {
-        onSelectUrl(urls[selectedIndex].second)
-    }
-    LazyColumn(
-        modifier = modifier.padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun MovieSelection(
+    movieUrls: List<Pair<String, String>>,
+    selectedIndex: Int,
+    onSelectIndex: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded: Boolean by rememberSaveable { mutableStateOf(false) }
+    val lazyRowState: LazyListState = rememberLazyListState()
+    Column(
+        modifier = modifier.padding(horizontal = 16.dp)
     ) {
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = movie.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1
-                )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = stringResource(R.string.select_movie),
+                style = MaterialTheme.typography.titleMedium
+            )
+            if (lazyRowState.canScrollForward || lazyRowState.canScrollBackward || expanded) {
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
                         imageVector = if (expanded) {
@@ -201,36 +240,46 @@ internal fun MovieDescription(
                     )
                 }
             }
-            if (movie.content.isNotEmpty()) {
-                Text(
-                    text = movie.content,
-                    modifier = Modifier.animateContentSize(),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    overflow = TextOverflow.Ellipsis,
-                    maxLines = if (expanded) Int.MAX_VALUE else 1
-                )
-            }
         }
-        item {
-            Text(
-                text = stringResource(R.string.select_movie),
-                style = MaterialTheme.typography.titleMedium
-            )
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                itemsIndexed(urls) { index, item ->
-                    FilterChip(
-                        selected = selectedIndex == index,
-                        onClick = {
-                            selectedIndex = index
-                        },
-                        label = {
-                            Text(text = item.first)
-                        }
-                    )
+        AnimatedContent(
+            targetState = expanded,
+            label = "MovieSelection",
+            transitionSpec = {
+                (fadeIn(animationSpec = tween(220, delayMillis = 90)) + expandVertically())
+                    .togetherWith(fadeOut(animationSpec = tween(90)) + shrinkVertically())
+            }
+        ) { isExpanded ->
+            if (isExpanded) {
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    movieUrls.forEachIndexed { index, pair ->
+                        FilterChip(
+                            selected = selectedIndex == index,
+                            onClick = { onSelectIndex(index) },
+                            label = {
+                                Text(text = pair.first)
+                            }
+                        )
+                    }
+                }
+            } else {
+                LazyRow(
+                    state = lazyRowState,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    itemsIndexed(movieUrls) { index, item ->
+                        FilterChip(
+                            selected = selectedIndex == index,
+                            onClick = { onSelectIndex(index) },
+                            label = {
+                                Text(text = item.first)
+                            }
+                        )
+                    }
                 }
             }
         }
     }
 }
-

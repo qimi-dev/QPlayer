@@ -15,7 +15,10 @@ import javax.inject.Singleton
 private interface NetworkApi {
 
     @GET("api.php/provide/vod")
-    suspend fun fetchMovieList(@Query("ac") action: String): Result<NetworkMovieList>
+    suspend fun fetchMovieList(
+        @Query("ac") action: String? = "detail",
+        @Query("wd") keyword: String? = null
+    ): Result<NetworkMovieList>
 
 }
 
@@ -29,7 +32,7 @@ internal class RetrofitNetworkDataSource @Inject constructor() : NetworkDataSour
         .build()
         .create(NetworkApi::class.java)
 
-    override suspend fun fetchMovieList(action: String): Result<NetworkMovieList> =
-        networkApi.fetchMovieList(action)
+    override suspend fun fetchMovieList(keyword: String?): Result<NetworkMovieList> =
+        networkApi.fetchMovieList(keyword = keyword)
 
 }

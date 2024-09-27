@@ -2,14 +2,19 @@ package com.qimi.app.qplayer.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.qimi.app.qplayer.core.model.data.Movie
 import com.qimi.app.qplayer.feature.main.navigation.MainRoute
 import com.qimi.app.qplayer.feature.main.navigation.mainScreen
 import com.qimi.app.qplayer.feature.preview.navigation.PreviewRoute
 import com.qimi.app.qplayer.feature.preview.navigation.navigateToPreview
 import com.qimi.app.qplayer.feature.preview.navigation.previewScreen
+import com.qimi.app.qplayer.feature.search.navigation.SearchRoute
+import com.qimi.app.qplayer.feature.search.navigation.navigateToSearch
+import com.qimi.app.qplayer.feature.search.navigation.searchScreen
 
 @Composable
 fun QPlayerNavHost(
@@ -22,20 +27,28 @@ fun QPlayerNavHost(
         modifier = modifier
     ) {
         mainScreen(
-            onMovieClick = {
-                navController.navigateToPreview(
-                    PreviewRoute(
-                        id = it.id,
-                        name = it.name,
-                        image = it.image,
-                        movieClass = it.movieClass,
-                        remark = it.remark,
-                        content = it.content,
-                        urls = it.urls
-                    )
-                )
-            }
+            onSearchMovie = navController::navigateToSearch,
+            onPreviewMovie = navController::navigateToPreview
         )
         previewScreen()
+        searchScreen(
+            onBackClick = navController::navigateUp,
+            onPreviewMovie = navController::navigateToPreview
+        )
     }
+}
+
+internal fun NavController.navigateToPreview(movie: Movie) {
+    navigateToPreview(
+        PreviewRoute(
+            id = movie.id,
+            name = movie.name,
+            image = movie.image,
+            movieClass = movie.movieClass,
+            remark = movie.remark,
+            content = movie.content,
+            urls = movie.urls,
+            score = movie.score
+        )
+    )
 }

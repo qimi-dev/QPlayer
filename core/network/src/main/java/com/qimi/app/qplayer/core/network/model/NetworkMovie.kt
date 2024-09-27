@@ -17,7 +17,9 @@ data class NetworkMovie(
     @SerializedName("vod_content")
     val content: String,
     @SerializedName("vod_play_url")
-    val urls: String
+    val urls: String,
+    @SerializedName("vod_score")
+    val score: String,
 )
 
 fun NetworkMovie.asExternalModel() = Movie(
@@ -28,4 +30,5 @@ fun NetworkMovie.asExternalModel() = Movie(
     remark = remark,
     content = content,
     urls = urls,
+    score = score
 )

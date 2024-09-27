@@ -45,6 +45,7 @@ dependencies {
 
     implementation(projects.feature.main)
     implementation(projects.feature.preview)
+    implementation(projects.feature.search)
 
     implementation(projects.core.model)
     implementation(projects.core.data)

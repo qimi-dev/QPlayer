@@ -1,6 +1,5 @@
 package com.qimi.app.qplayer.feature.main
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.qimi.app.qplayer.core.data.repository.MoviesRepository
@@ -10,9 +9,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -25,35 +21,35 @@ class MainViewModel @Inject constructor(
         private const val TAG = "MainViewModel"
     }
 
-    private val _movieListUiState: MutableStateFlow<MovieListUiState> =
-        MutableStateFlow(MovieListUiState.Loading)
+    private val _latestMovieListUiState: MutableStateFlow<LatestMovieListUiState> =
+        MutableStateFlow(LatestMovieListUiState.Loading)
 
-    val movieListUiState: StateFlow<MovieListUiState> = _movieListUiState.asStateFlow()
+    val latestMovieListUiState: StateFlow<LatestMovieListUiState> = _latestMovieListUiState.asStateFlow()
 
     init {
-        refreshMovieList()
+        refreshLatestMovieList()
     }
 
-    private fun refreshMovieList() {
+    private fun refreshLatestMovieList() {
         viewModelScope.launch(Dispatchers.IO) {
-            _movieListUiState.value = MovieListUiState.Loading
-            moviesRepository.fetchMovieList("detail")
+            _latestMovieListUiState.value = LatestMovieListUiState.Loading
+            moviesRepository.fetchMovieList()
                 .onSuccess {
                     if (it.code == 1) {
-                        _movieListUiState.value = MovieListUiState.Success(it)
+                        _latestMovieListUiState.value = LatestMovieListUiState.Success(it)
                     } else {
-                        _movieListUiState.value = MovieListUiState.Failure
+                        _latestMovieListUiState.value = LatestMovieListUiState.Failure
                     }
                 }.onFailure {
-                    _movieListUiState.value = MovieListUiState.Failure
+                    _latestMovieListUiState.value = LatestMovieListUiState.Failure
                 }
         }
     }
 
 }
 
-sealed interface MovieListUiState {
-    data object Loading : MovieListUiState
-    data class Success(val list: MovieList) : MovieListUiState
-    data object Failure : MovieListUiState
+sealed interface LatestMovieListUiState {
+    data object Loading : LatestMovieListUiState
+    data class Success(val moveList: MovieList) : LatestMovieListUiState
+    data object Failure : LatestMovieListUiState
 }

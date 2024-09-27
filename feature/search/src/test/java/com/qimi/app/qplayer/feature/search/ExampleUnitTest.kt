@@ -1,4 +1,4 @@
-package com.qimi.app.qplayer.core.ui
+package com.qimi.app.qplayer.feature.search
 
 import org.junit.Test
 

@@ -7,5 +7,6 @@ data class Movie(
     val movieClass: String,
     val remark: String,
     val content: String,
-    val urls: String
+    val urls: String,
+    val score: String
 )

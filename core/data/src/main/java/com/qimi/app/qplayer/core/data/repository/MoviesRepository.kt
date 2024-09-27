@@ -5,6 +5,6 @@ import com.qimi.app.qplayer.core.network.model.NetworkMovieList
 
 interface MoviesRepository {
 
-    suspend fun fetchMovieList(action: String): Result<MovieList>
+    suspend fun fetchMovieList(keyword: String? = null): Result<MovieList>
 
 }

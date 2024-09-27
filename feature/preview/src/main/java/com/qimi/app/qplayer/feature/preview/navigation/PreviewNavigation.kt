@@ -16,24 +16,14 @@ data class PreviewRoute(
     val movieClass: String,
     val remark: String,
     val content: String,
-    val urls: String
+    val urls: String,
+    val score: String
 )
 
 fun NavController.navigateToPreview(route: PreviewRoute) = navigate(route)
 
 fun NavGraphBuilder.previewScreen() {
     composable<PreviewRoute> {
-        val route: PreviewRoute = it.toRoute()
-        PreviewRoute(
-            movie = Movie(
-                id = route.id,
-                name = route.name,
-                image = route.image,
-                movieClass = route.movieClass,
-                remark = route.remark,
-                content = route.content,
-                urls = route.urls
-            )
-        )
+        PreviewRoute()
     }
 }
