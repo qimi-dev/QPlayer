@@ -1,7 +1,6 @@
 package com.qimi.app.qplayer.feature.preview
 
 import android.content.Context
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.media3.exoplayer.ExoPlayer
@@ -43,34 +42,50 @@ class PreviewViewModel @Inject constructor(
             first to second
         }
 
+    private val exoPlayer: ExoPlayer = ExoPlayer.Builder(context).build()
+
+    private val playerState: PlayerState = PlayerState(exoPlayer)
+
     private val _previewUiState: MutableStateFlow<PreviewUiState> =
         MutableStateFlow(
             PreviewUiState(
-                movie = movie,
-                movieUrls = movieUrls,
-                selectedIndex = 0
+                name = movie.name,
+                score = movie.score,
+                description = movie.content,
+                urls = movieUrls,
+                selectedUrlIndex = 0,
+                playerState = playerState,
+                previewMode = PreviewMode.NON_FULLSCREEN
             )
         )
 
     val previewUiState: StateFlow<PreviewUiState> = _previewUiState.asStateFlow()
 
-    private val exoPlayer: ExoPlayer = ExoPlayer.Builder(context).build()
-
-    val playerState: PlayerState = PlayerState(exoPlayer)
-
     init {
         play(0)
     }
 
-    fun play(index: Int) {
-        playerState.play(movieUrls[index].second)
+    fun play(selectedUrlIndex: Int) {
+        playerState.play(movieUrls[selectedUrlIndex].second)
         _previewUiState.update {
-            it.copy(selectedIndex = index)
+            it.copy(selectedUrlIndex = selectedUrlIndex)
         }
     }
 
     fun stop() {
         exoPlayer.stop()
+    }
+
+    fun enterFullScreen() {
+        _previewUiState.update {
+            it.copy(previewMode = PreviewMode.FULLSCREEN)
+        }
+    }
+
+    fun exitFullScreen() {
+        _previewUiState.update {
+            it.copy(previewMode = PreviewMode.NON_FULLSCREEN)
+        }
     }
 
     override fun onCleared() {
@@ -80,8 +95,16 @@ class PreviewViewModel @Inject constructor(
 }
 
 data class PreviewUiState(
-    val movie: Movie,
-    val movieUrls: List<Pair<String, String>>,
-    val selectedIndex: Int
+    val name: String,
+    val score: String,
+    val description: String,
+    val urls: List<Pair<String, String>>,
+    val selectedUrlIndex: Int,
+    val playerState: PlayerState,
+    val previewMode: PreviewMode
 )
+
+enum class PreviewMode {
+    NON_FULLSCREEN, FULLSCREEN
+}
 

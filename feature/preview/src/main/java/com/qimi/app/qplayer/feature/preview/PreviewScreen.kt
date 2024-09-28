@@ -1,8 +1,13 @@
 package com.qimi.app.qplayer.feature.preview
 
-import android.app.Activity
+import android.content.pm.ActivityInfo
+import android.view.Window
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -48,10 +53,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,11 +64,9 @@ import androidx.core.text.HtmlCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.qimi.app.qplayer.core.model.data.Movie
 import com.qimi.app.qplayer.core.ui.CompactPlayerController
 import com.qimi.app.qplayer.core.ui.Player
 import com.qimi.app.qplayer.core.ui.PlayerState
-import kotlinx.coroutines.delay
 
 @Composable
 internal fun PreviewRoute(
@@ -75,10 +77,11 @@ internal fun PreviewRoute(
     val previewUiState: PreviewUiState by viewModel.previewUiState.collectAsState()
     PreviewScreen(
         previewUiState = previewUiState,
-        playerState = viewModel.playerState,
         onPlay = viewModel::play,
         onStop = viewModel::stop,
         onBackClick = onBackClick,
+        onEnterFullScreen = viewModel::enterFullScreen,
+        onExitFullScreen = viewModel::exitFullScreen,
         modifier = modifier
     )
 }
@@ -86,66 +89,153 @@ internal fun PreviewRoute(
 @Composable
 internal fun PreviewScreen(
     previewUiState: PreviewUiState,
-    playerState: PlayerState,
     onPlay: (Int) -> Unit,
     onStop: () -> Unit,
     onBackClick: () -> Unit,
+    onEnterFullScreen: () -> Unit,
+    onExitFullScreen: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isPlayerShow: Boolean by remember { mutableStateOf(true) }
-    BackHandler {
-        onStop()
-        isPlayerShow = false
-        onBackClick()
-    }
     Scaffold {
-        Column(modifier = modifier.padding(it)) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .background(Color.Black)
-            ) {
-                if (isPlayerShow) {
-                    CompactPlayerWindow(
-                        playerState = playerState,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Spacer(modifier = Modifier.fillMaxSize())
-                }
+        when (previewUiState.previewMode) {
+            PreviewMode.NON_FULLSCREEN -> {
+                CompactPreviewScreen(
+                    previewUiState = previewUiState,
+                    onPlay = onPlay,
+                    onStop = onStop,
+                    onBackClick = onBackClick,
+                    onEnterFullScreen = onEnterFullScreen,
+                    modifier = modifier.padding(it)
+                )
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item {
-                    MovieDescription(movie = previewUiState.movie)
-                }
-                item {
-                    MovieSelection(
-                        movieUrls = previewUiState.movieUrls,
-                        selectedIndex = previewUiState.selectedIndex,
-                        onSelectIndex = onPlay
-                    )
-                }
+            PreviewMode.FULLSCREEN -> {
+                ExpandedPreviewScreen(
+                    previewUiState = previewUiState,
+                    onExitFullScreen = onExitFullScreen,
+                    modifier = modifier.padding(it)
+                )
             }
         }
     }
 }
 
 @Composable
-internal fun CompactPlayerWindow(
-    playerState: PlayerState,
+internal fun ExpandedPreviewScreen(
+    previewUiState: PreviewUiState,
+    onExitFullScreen: () -> Unit,
     modifier: Modifier = Modifier
+) {
+    val activity: ComponentActivity = LocalContext.current as ComponentActivity
+    val window: Window = activity.window
+    val windowInsetsController = remember(window) {
+        WindowInsetsControllerCompat(window, window.decorView)
+    }
+    DisposableEffect(Unit) {
+        // 切换为传感器方向横屏，隐藏状态栏
+        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        windowInsetsController.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
+        // 退出全屏时回退所有的配置
+        onDispose {
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
+        }
+    }
+    BackHandler(onBack = onExitFullScreen)
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        CompactPlayer(
+            playerState = previewUiState.playerState,
+            onBack = onExitFullScreen,
+            onEnterFullScreen = onExitFullScreen,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
+@Composable
+internal fun CompactPreviewScreen(
+    previewUiState: PreviewUiState,
+    onPlay: (Int) -> Unit,
+    onStop: () -> Unit,
+    onBackClick: () -> Unit,
+    onEnterFullScreen: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val activity: ComponentActivity = LocalContext.current as ComponentActivity
+    var isReadyToRelease: Boolean by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        // 状态栏设置为黑色背景
+        activity.enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.BLACK)
+        )
+    }
+    val onBack: () -> Unit = remember(onStop, activity, onBackClick) {
+        {
+            activity.enableEdgeToEdge()
+            onStop()
+            isReadyToRelease = true
+            onBackClick()
+        }
+    }
+    BackHandler(onBack = onBack)
+    Column(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .background(if (!isReadyToRelease) Color.Black else Color.Transparent)
+        ) {
+            CompactPlayer(
+                playerState = previewUiState.playerState,
+                onBack = onBack,
+                onEnterFullScreen = onEnterFullScreen,
+                modifier = Modifier.fillMaxSize(),
+                visible = !isReadyToRelease
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                MovieDescription(
+                    name = previewUiState.name,
+                    score = previewUiState.score,
+                    description = previewUiState.description
+                )
+            }
+            item {
+                MovieSelection(
+                    urls = previewUiState.urls,
+                    selectedIndex = previewUiState.selectedUrlIndex,
+                    onSelectIndex = onPlay
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun CompactPlayer(
+    playerState: PlayerState,
+    onBack: () -> Unit,
+    onEnterFullScreen: () -> Unit,
+    modifier: Modifier = Modifier,
+    visible: Boolean = true
 ) {
     Player(
         state = playerState,
-        modifier = modifier
+        modifier = modifier.alpha(if (visible) 1f else 0f)
     ) {
         CompactPlayerController(
             state = playerState,
-            onFullscreen = {},
+            onBack = onBack,
+            onEnterFullScreen = onEnterFullScreen,
             modifier = Modifier.fillMaxSize()
         )
     }
@@ -153,7 +243,9 @@ internal fun CompactPlayerWindow(
 
 @Composable
 internal fun MovieDescription(
-    movie: Movie,
+    name: String,
+    score: String,
+    description: String,
     modifier: Modifier = Modifier
 ) {
     var expanded: Boolean by remember { mutableStateOf(false) }
@@ -166,19 +258,19 @@ internal fun MovieDescription(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = movie.name,
+                text = name,
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1
             )
             Text(
-                text = movie.score,
+                text = score,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.outline
             )
         }
-        if (movie.content.isNotEmpty()) {
-            val annotatedText = remember(movie) {
-                val spanned = HtmlCompat.fromHtml(movie.content, HtmlCompat.FROM_HTML_MODE_LEGACY)
+        if (description.isNotEmpty()) {
+            val annotatedText = remember(description) {
+                val spanned = HtmlCompat.fromHtml(description, HtmlCompat.FROM_HTML_MODE_LEGACY)
                 val text = spanned.toString()
                 buildAnnotatedString { append(text) }
             }
@@ -202,7 +294,7 @@ internal fun MovieDescription(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun MovieSelection(
-    movieUrls: List<Pair<String, String>>,
+    urls: List<Pair<String, String>>,
     selectedIndex: Int,
     onSelectIndex: (Int) -> Unit,
     modifier: Modifier = Modifier
@@ -247,7 +339,7 @@ internal fun MovieSelection(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    movieUrls.forEachIndexed { index, pair ->
+                    urls.forEachIndexed { index, pair ->
                         FilterChip(
                             selected = selectedIndex == index,
                             onClick = { onSelectIndex(index) },
@@ -262,7 +354,7 @@ internal fun MovieSelection(
                     state = lazyRowState,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    itemsIndexed(movieUrls) { index, item ->
+                    itemsIndexed(urls) { index, item ->
                         FilterChip(
                             selected = selectedIndex == index,
                             onClick = { onSelectIndex(index) },

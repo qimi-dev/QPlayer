@@ -3,9 +3,14 @@ package com.qimi.app.qplayer.core.ui
 import android.content.Context
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
@@ -18,9 +23,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -33,6 +40,7 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,6 +55,13 @@ fun Player(
     playerController: @Composable BoxScope.(PlayerState) -> Unit = {}
 ) {
     val context: Context = LocalContext.current
+    var ticks: Boolean by remember { mutableStateOf(false) }
+    var isShowPlayerController: Boolean by remember { mutableStateOf(false) }
+    LaunchedEffect(ticks) {
+        isShowPlayerController = true
+        delay(1500)
+        isShowPlayerController = false
+    }
     Box(modifier = modifier) {
         AndroidView(
             factory = { PlayerView(context) },
@@ -56,7 +71,23 @@ fun Player(
                 it.useController = false
             }
         )
-        playerController(state)
+        Spacer(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = null,
+                    indication = null
+                ) {
+                    ticks = !ticks
+                }
+        )
+        AnimatedVisibility(
+            visible = isShowPlayerController,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            playerController(state)
+        }
     }
 }
 
