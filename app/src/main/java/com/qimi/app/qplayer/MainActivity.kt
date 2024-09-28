@@ -2,11 +2,13 @@ package com.qimi.app.qplayer
 
 import android.app.UiModeManager
 import android.content.Context
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.view.Window
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -21,6 +23,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.qimi.app.qplayer.navigation.QPlayerNavHost
 import com.qimi.app.qplayer.ui.theme.QPlayerTheme
 import dagger.hilt.android.AndroidEntryPoint

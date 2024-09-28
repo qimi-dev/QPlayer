@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="Theme.Main" parent="Theme.QPlayer">
+        <item name="android:windowBackground">@color/backgroundDark</item>
+    </style>
+
+    <style name="Theme.Onboarding" parent="Theme.QPlayer.Fullscreen">
+        <item name="android:windowBackground">@color/backgroundDark</item>
+    </style>
+
+</resources>
