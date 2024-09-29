@@ -6,6 +6,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navOptions
 import com.qimi.app.qplayer.core.model.data.Movie
 import com.qimi.app.qplayer.feature.main.navigation.MainRoute
 import com.qimi.app.qplayer.feature.main.navigation.mainScreen

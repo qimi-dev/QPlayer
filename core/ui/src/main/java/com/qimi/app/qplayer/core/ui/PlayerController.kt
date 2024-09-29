@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -110,7 +111,7 @@ internal fun BackButton(
         modifier = modifier
     ) {
         Icon(
-            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
             contentDescription = null
         )
     }

@@ -59,7 +59,7 @@ fun Player(
     var isShowPlayerController: Boolean by remember { mutableStateOf(false) }
     LaunchedEffect(ticks) {
         isShowPlayerController = true
-        delay(1500)
+        delay(5_000)
         isShowPlayerController = false
     }
     Box(modifier = modifier) {
