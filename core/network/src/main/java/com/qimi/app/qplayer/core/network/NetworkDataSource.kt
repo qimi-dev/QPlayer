@@ -4,6 +4,6 @@ import com.qimi.app.qplayer.core.network.model.NetworkMovieList
 
 interface NetworkDataSource {
 
-    suspend fun fetchMovieList(keyword: String? = null): Result<NetworkMovieList>
+    suspend fun fetchMovieList(keyword: String, pageIndex: Int): Result<NetworkMovieList>
 
 }

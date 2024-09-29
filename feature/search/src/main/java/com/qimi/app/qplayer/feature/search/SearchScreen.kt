@@ -34,6 +34,7 @@ import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DividerDefaults
@@ -103,6 +104,7 @@ internal fun SearchRoute(
     SearchScreen(
         searchUiState = searchUiState,
         onSearch = viewModel::onSearch,
+        onExpandSearch = viewModel::onExpandSearch,
         onPreviewMovie = onPreviewMovie,
         onBackClick = onBackClick,
         modifier = modifier
@@ -114,6 +116,7 @@ internal fun SearchRoute(
 internal fun SearchScreen(
     searchUiState: SearchUiState,
     onSearch: (String) -> Unit,
+    onExpandSearch: () -> Unit,
     onPreviewMovie: (Movie) -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -168,7 +171,8 @@ internal fun SearchScreen(
                         onClick = {
                             focusManager.clearFocus()
                             onSearch(searchContext)
-                        }
+                        },
+                        enabled = searchUiState !is SearchUiState.View || !searchUiState.isSearching
                     ) {
                         Text(text = stringResource(R.string.search))
                     }
@@ -182,15 +186,17 @@ internal fun SearchScreen(
                 is SearchUiState.Idle -> {
                     SearchCandidateArea(modifier = Modifier.fillMaxSize())
                 }
-                is SearchUiState.Success -> {
-                    SearchResultArea(
-                        movieList = searchUiState.movieList,
-                        onPreviewMovie = onPreviewMovie,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-                is SearchUiState.Searching -> {
-                    SearchingResultArea(modifier = Modifier.fillMaxSize())
+                is SearchUiState.View -> {
+                    if (searchUiState.isSearching && searchUiState.movies.isEmpty()) {
+                        SearchingResultArea(modifier = Modifier.fillMaxSize())
+                    } else {
+                        SearchResultArea(
+                            searchUiState = searchUiState,
+                            onPreviewMovie = onPreviewMovie,
+                            onExpandSearch = onExpandSearch,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
         }
@@ -280,8 +286,9 @@ internal fun SearchCandidateArea(
 
 @Composable
 internal fun SearchResultArea(
-    movieList: MovieList,
+    searchUiState: SearchUiState.View,
     onPreviewMovie: (Movie) -> Unit,
+    onExpandSearch: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context: Context = LocalContext.current
@@ -289,7 +296,10 @@ internal fun SearchResultArea(
         modifier = modifier,
         contentPadding = PaddingValues(horizontal = 8.dp)
     ) {
-        items(movieList.list) { movie ->
+        items(
+            items = searchUiState.movies,
+            key = { it.id }
+        ) { movie ->
             val imageRequest: ImageRequest = remember {
                 ImageRequest.Builder(context)
                     .data(movie.image)
@@ -342,6 +352,33 @@ internal fun SearchResultArea(
                 modifier = Modifier.padding(horizontal = 8.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHighest
             )
+        }
+        item {
+            if (searchUiState.isAllowExpandSearch) {
+                if (!searchUiState.isSearching) {
+                    LaunchedEffect(Unit) { onExpandSearch() }
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize().padding(8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.loading),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "到底了",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
         }
     }
 }
