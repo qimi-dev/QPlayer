@@ -1,3 +1,5 @@
 <resources>
     <string name="newest_addition">最新添加</string>
+    <string name="movie">电影</string>
+    <string name="variety_show">综艺</string>
 </resources>

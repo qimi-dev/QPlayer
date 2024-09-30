@@ -1,22 +1,31 @@
 package com.qimi.app.qplayer.core.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -28,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
@@ -36,34 +46,127 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
 @Composable
+fun ExpandedPlayerController(
+    name: String,
+    state: PlayerState,
+    onBack: () -> Unit,
+    onExitFullScreen: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    PlayerController(
+        modifier = modifier,
+        topBar = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BackButton(onBack = onBack)
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+        },
+        bottomBar = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.Black.copy(alpha = 0.3f))
+                    .padding(bottom = 8.dp)
+            ) {
+                PlayProgressBar(
+                    onSeekTo = {
+                        state.showController()
+                        state.seekTo(it)
+                    },
+                    onReceiveContentPercentage = state::getContentPercentage,
+                    onReceiveBufferedPercentage = state::getBufferedPercentage,
+                    modifier = Modifier.fillMaxWidth().wrapContentHeight()
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (state.isPlayButtonAvailable) {
+                        PlayButton(
+                            onClick = {
+                                state.showController()
+                                if (state.isPlaying) state.play() else state.pause()
+                            },
+                            iconPainter = painterResource(
+                                if (state.isPlaying) R.drawable.ic_play_arrow_24 else R.drawable.ic_pause_24
+                            ),
+                            modifier = Modifier.wrapContentSize()
+                        )
+                    }
+                    FullscreenButton(
+                        onClick = {
+                            state.showController()
+                            onExitFullScreen()
+                        },
+                        iconPainter = painterResource(R.drawable.ic_fullscreen_24),
+                        modifier = Modifier.wrapContentSize()
+                    )
+                }
+            }
+        }
+    )
+}
+
+@Composable
 fun CompactPlayerController(
     state: PlayerState,
     onBack: () -> Unit,
+    onBackHome: () -> Unit,
     onEnterFullScreen: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     PlayerController(
         modifier = modifier,
         topBar = {
-            BackButton(
-                onBack = onBack
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BackButton(onBack = onBack)
+                HomeButton(onBackHome = onBackHome)
+            }
         },
         bottomBar = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                PlayButton(
-                    state = state,
-                    modifier = Modifier.wrapContentSize()
-                )
+                if (state.isPlayButtonAvailable) {
+                    PlayButton(
+                        onClick = {
+                            state.showController()
+                            if (state.isPlaying) state.play() else state.pause()
+                        },
+                        iconPainter = painterResource(
+                            if (state.isPlaying) R.drawable.ic_play_arrow_24 else R.drawable.ic_pause_24
+                        ),
+                        modifier = Modifier.wrapContentSize()
+                    )
+                }
                 PlayProgressBar(
-                    state = state,
+                    onSeekTo = {
+                        state.showController()
+                        state.seekTo(it)
+                    },
+                    onReceiveContentPercentage = state::getContentPercentage,
+                    onReceiveBufferedPercentage = state::getBufferedPercentage,
                     modifier = Modifier.weight(1f)
                 )
                 FullscreenButton(
-                    onClick = onEnterFullScreen,
+                    onClick = {
+                        state.showController()
+                        onEnterFullScreen()
+                    },
+                    iconPainter = painterResource(R.drawable.ic_fullscreen_24),
                     modifier = Modifier.wrapContentSize()
                 )
             }
@@ -111,7 +214,23 @@ internal fun BackButton(
         modifier = modifier
     ) {
         Icon(
-            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+            contentDescription = null
+        )
+    }
+}
+
+@Composable
+internal fun HomeButton(
+    onBackHome: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    IconButton(
+        onClick = onBackHome,
+        modifier = modifier
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Home,
             contentDescription = null
         )
     }
@@ -119,55 +238,45 @@ internal fun BackButton(
 
 @Composable
 internal fun PlayButton(
-    state: PlayerState,
+    onClick: () -> Unit,
+    iconPainter: Painter,
     modifier: Modifier = Modifier
 ) {
-    if (state.isShowPlayButton) {
-        IconButton(
-            onClick = { if (state.isShowPlayState) state.play() else state.pause() },
-            modifier = modifier
-        ) {
-            AnimatedContent(
-                targetState = state.isShowPlayState,
-                label = "isStartPlaying"
-            ) { isShowPlayState ->
-                Icon(
-                    painter = painterResource(
-                        if (isShowPlayState) R.drawable.ic_play_arrow_24 else R.drawable.ic_pause_24
-                    ),
-                    contentDescription = null
-                )
-            }
+    IconButton(
+        onClick = onClick,
+        modifier = modifier
+    ) {
+        AnimatedContent(
+            targetState = iconPainter,
+            label = "PlayButtonIcon"
+        ) { targetState ->
+            Icon(
+                painter = targetState,
+                contentDescription = null
+            )
         }
     }
 }
 
 @Composable
 internal fun PlayProgressBar(
-    state: PlayerState,
+    onSeekTo: (Float) -> Unit,
+    onReceiveContentPercentage: () -> Float,
+    onReceiveBufferedPercentage: () -> Float,
     modifier: Modifier = Modifier
 ) {
-    val percentages by produceState(0f to 0f, state) {
+    val percentages by produceState(0f to 0f) {
         while (true) {
-            val contentPercentage = state.getContentPercentage()
-            val bufferedPercentage = state.getBufferedPercentage()
+            val contentPercentage = onReceiveContentPercentage()
+            val bufferedPercentage = onReceiveBufferedPercentage()
             value = contentPercentage to bufferedPercentage
             delay(1000)
         }
     }
     var containerWidth: Int by remember { mutableIntStateOf(0) }
-//    val localDensity: Density = LocalDensity.current
-//    val thumbSize: Dp = remember { 16.dp }
-//    val thumbMixOffset: Float by remember {
-//        derivedStateOf { with(localDensity) { - (thumbSize.toPx() / 2) } }
-//    }
-//    val thumbMaxOffset: Float by remember {
-//        derivedStateOf { with(localDensity) { containerWidth - (thumbSize.toPx() / 2) } }
-//    }
-//    var thumbOffset: Float by remember { mutableFloatStateOf(thumbMixOffset) }
     Box(
         modifier = modifier
-            .heightIn(min = 24.dp)
+            .wrapContentHeight()
             .onSizeChanged {
                 containerWidth = it.width
             }
@@ -175,7 +284,7 @@ internal fun PlayProgressBar(
                 detectTapGestures { offset: Offset ->
                     // 获取当前触摸的位置，计算出视频跳转的位置
                     if (containerWidth > 0) {
-                        state.seekTo(offset.x / containerWidth)
+                        onSeekTo(offset.x / containerWidth)
                     }
                 }
             },
@@ -193,27 +302,6 @@ internal fun PlayProgressBar(
             color = MaterialTheme.colorScheme.surface,
             modifier = Modifier.fillMaxWidth(percentages.first)
         )
-//        ProgressBarThumb(
-//            modifier = Modifier
-//                .size(thumbSize)
-//                .offset { IntOffset(thumbOffset.roundToInt(), 0) }
-//                .draggable(
-//                    orientation = Orientation.Horizontal,
-//                    state = rememberDraggableState { delta ->
-//                        thumbOffset += delta
-//                        if (thumbOffset < thumbMixOffset) {
-//                            thumbOffset = thumbMixOffset
-//                        } else if (thumbOffset > thumbMaxOffset) {
-//                            thumbOffset = thumbMaxOffset
-//                        }
-//                    },
-//                    onDragStopped = {
-//                        if (containerWidth > 0) {
-//                            state.seekTo((thumbOffset - thumbMixOffset) / containerWidth)
-//                        }
-//                    }
-//                )
-//        )
     }
 }
 
@@ -231,19 +319,9 @@ private fun ProgressBarTrack(
 }
 
 @Composable
-private fun ProgressBarThumb(
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier,
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surface
-    ) {}
-}
-
-@Composable
 internal fun FullscreenButton(
     onClick: () -> Unit,
+    iconPainter: Painter,
     modifier: Modifier = Modifier
 ) {
     IconButton(
@@ -251,7 +329,7 @@ internal fun FullscreenButton(
         modifier = modifier
     ) {
         Icon(
-            painter = painterResource(R.drawable.ic_fullscreen_24),
+            painter = iconPainter,
             contentDescription = null
         )
     }

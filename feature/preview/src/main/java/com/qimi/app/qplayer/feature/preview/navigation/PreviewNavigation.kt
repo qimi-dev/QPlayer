@@ -22,8 +22,11 @@ data class PreviewRoute(
 
 fun NavController.navigateToPreview(route: PreviewRoute) = navigate(route)
 
-fun NavGraphBuilder.previewScreen(onBackClick: () -> Unit) {
+fun NavGraphBuilder.previewScreen(
+    onBackClick: () -> Unit,
+    onBackHomeClick: () -> Unit
+) {
     composable<PreviewRoute> {
-        PreviewRoute(onBackClick = onBackClick)
+        PreviewRoute(onBackClick = onBackClick, onBackHomeClick = onBackHomeClick)
     }
 }

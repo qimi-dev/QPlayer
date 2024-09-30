@@ -11,5 +11,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.coil)
     implementation(libs.coil.compose)
+
     implementation(projects.core.data)
+    implementation(projects.core.ui)
 }

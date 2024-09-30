@@ -1,6 +1,7 @@
 package com.qimi.app.qplayer.feature.preview
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.media3.exoplayer.ExoPlayer
@@ -37,6 +38,7 @@ class PreviewViewModel @Inject constructor(
 
     private val movieUrls: List<Pair<String, String>> = movie.urls
         .split("#")
+        .filter { it.isNotEmpty() }
         .map {
             val (first, second) = it.split("$")
             first to second

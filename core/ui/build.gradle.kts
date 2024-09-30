@@ -14,4 +14,5 @@ dependencies {
     implementation(libs.media3.exoplayer.dash)
     implementation(libs.media3.ui)
     implementation(libs.media3.exoplayer.hls)
+    implementation(libs.lottie.compose)
 }

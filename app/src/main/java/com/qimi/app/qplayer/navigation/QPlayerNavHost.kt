@@ -33,7 +33,10 @@ fun QPlayerNavHost(
             onPreviewMovie = navController::navigateToPreview
         )
         previewScreen(
-            onBackClick = navController::navigateUp
+            onBackClick = navController::navigateUp,
+            onBackHomeClick = {
+                navController.popBackStack( route = MainRoute, inclusive = false)
+            }
         )
         searchScreen(
             onBackClick = navController::navigateUp,

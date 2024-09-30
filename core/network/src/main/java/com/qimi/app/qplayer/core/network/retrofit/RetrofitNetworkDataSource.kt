@@ -18,7 +18,8 @@ private interface NetworkApi {
     suspend fun fetchMovieList(
         @Query("ac") action: String? = "detail",
         @Query("wd") keyword: String = "",
-        @Query("pg") pageIndex: Int = 0
+        @Query("pg") pageIndex: Int = 0,
+        @Query("t") type: Int? = null
     ): Result<NetworkMovieList>
 
 }
@@ -33,7 +34,11 @@ internal class RetrofitNetworkDataSource @Inject constructor() : NetworkDataSour
         .build()
         .create(NetworkApi::class.java)
 
-    override suspend fun fetchMovieList(keyword: String, pageIndex: Int): Result<NetworkMovieList> =
-        networkApi.fetchMovieList(keyword = keyword, pageIndex = pageIndex)
+    override suspend fun fetchMovieList(
+        keyword: String,
+        pageIndex: Int,
+        type: Int
+    ): Result<NetworkMovieList> =
+        networkApi.fetchMovieList(keyword = keyword, pageIndex = pageIndex, type = type)
 
 }

@@ -2,52 +2,48 @@ package com.qimi.app.qplayer.core.ui
 
 import android.content.Context
 import android.util.Log
-import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.common.Tracks
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Player(
     modifier: Modifier = Modifier,
@@ -55,13 +51,14 @@ fun Player(
     playerController: @Composable BoxScope.(PlayerState) -> Unit = {}
 ) {
     val context: Context = LocalContext.current
-    var ticks: Boolean by remember { mutableStateOf(false) }
-    var isShowPlayerController: Boolean by remember { mutableStateOf(false) }
-    LaunchedEffect(ticks) {
-        isShowPlayerController = true
-        delay(5_000)
-        isShowPlayerController = false
+    LaunchedEffect(state.isControllerAvailable) {
+        if (state.isControllerAvailable) {
+            delay(5_000)
+            state.hideController()
+        }
     }
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.loading))
+    val progress by animateLottieCompositionAsState(composition, iterations = LottieConstants.IterateForever)
     Box(modifier = modifier) {
         AndroidView(
             factory = { PlayerView(context) },
@@ -71,18 +68,45 @@ fun Player(
                 it.useController = false
             }
         )
+        AnimatedVisibility(
+            visible = state.isBuffering,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                LottieAnimation(
+                    composition = composition,
+                    progress = { progress },
+                    modifier = Modifier.height(120.dp),
+                    contentScale = ContentScale.FillHeight
+                )
+            }
+        }
         Spacer(
             modifier = Modifier
                 .fillMaxSize()
-                .clickable(
+                .combinedClickable(
                     interactionSource = null,
-                    indication = null
-                ) {
-                    ticks = !ticks
-                }
+                    indication = null,
+                    onClick = {
+                        if (state.isControllerAvailable) {
+                            state.hideController()
+                        } else {
+                            state.showController()
+                        }
+                    },
+                    onDoubleClick = {
+                        if (state.isPlayButtonAvailable) {
+                            if (state.isPlaying) state.play() else state.pause()
+                        }
+                    }
+                )
         )
         AnimatedVisibility(
-            visible = isShowPlayerController,
+            visible = state.isControllerAvailable,
             enter = fadeIn(),
             exit = fadeOut()
         ) {
@@ -106,14 +130,24 @@ class PlayerState(internal val player: ExoPlayer) {
 
     private var isPlayWhenReady: Boolean by mutableStateOf(player.playWhenReady)
 
-    val isShowPlayButton: Boolean by derivedStateOf {
+    private var playbackSuppressionReason: Int by mutableIntStateOf(player.playbackSuppressionReason)
+
+    var isControllerAvailable: Boolean by mutableStateOf(true)
+        private set
+
+    val isPlayButtonAvailable: Boolean by derivedStateOf {
         availableCommands.contains(Player.COMMAND_PLAY_PAUSE)
     }
 
-    val isShowPlayState: Boolean by derivedStateOf {
+    val isPlaying: Boolean by derivedStateOf {
         !isPlayWhenReady
                 || playbackState == Player.STATE_IDLE
                 || playbackState == Player.STATE_ENDED
+                || playbackSuppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_NONE
+    }
+
+    val isBuffering: Boolean by derivedStateOf {
+        playbackState == Player.STATE_BUFFERING
     }
 
     init {
@@ -129,6 +163,10 @@ class PlayerState(internal val player: ExoPlayer) {
 
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 this@PlayerState.isPlayWhenReady = playWhenReady
+            }
+
+            override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+                this@PlayerState.playbackSuppressionReason = playbackSuppressionReason
             }
 
         })
@@ -158,6 +196,21 @@ class PlayerState(internal val player: ExoPlayer) {
         }
     }
 
+    fun seekTo(percentage: Float) {
+        val duration = player.duration
+        if (duration != C.TIME_UNSET && player.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)) {
+            player.seekTo((percentage * duration).toLong())
+        }
+    }
+
+    fun showController() {
+        isControllerAvailable = true
+    }
+
+    fun hideController() {
+        isControllerAvailable = false
+    }
+
     fun getContentPercentage(): Float {
         if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
             return 0f
@@ -173,15 +226,4 @@ class PlayerState(internal val player: ExoPlayer) {
         return player.bufferedPercentage / 100f
     }
 
-    fun seekTo(positionMs: Long) {
-        player.seekTo(positionMs)
-    }
-
-    fun seekTo(percentage: Float) {
-        val duration = player.duration
-        if (duration != C.TIME_UNSET) {
-            player.seekTo((percentage * duration).toLong())
-        }
-    }
-    
 }

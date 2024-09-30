@@ -30,9 +30,12 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -161,7 +164,7 @@ internal fun SearchScreen(
                         onClick = { onBackClick() }
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                             contentDescription = null
                         )
                     }
@@ -223,7 +226,7 @@ internal fun SearchBarField(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Icon(
-                imageVector = Icons.Outlined.Search,
+                imageVector = Icons.Rounded.Search,
                 contentDescription = null,
                 modifier = Modifier.scale(0.8f)
             )
@@ -242,7 +245,7 @@ internal fun SearchBarField(
             )
             if (context.isNotEmpty()) {
                 Icon(
-                    imageVector = Icons.Outlined.Clear,
+                    imageVector = Icons.Rounded.Clear,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.scale(0.8f).clickable { onContextReset() }

@@ -1,7 +1,11 @@
 package com.qimi.app.qplayer.feature.preview
 
 import android.content.pm.ActivityInfo
+import android.os.Build
+import android.util.Log
+import android.view.View
 import android.view.Window
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
@@ -40,7 +44,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -66,16 +72,20 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.qimi.app.qplayer.core.ui.CompactPlayerController
+import com.qimi.app.qplayer.core.ui.ExpandedPlayerController
 import com.qimi.app.qplayer.core.ui.Player
 import com.qimi.app.qplayer.core.ui.PlayerState
+import okhttp3.internal.toHexString
 
 @Composable
 internal fun PreviewRoute(
     onBackClick: () -> Unit,
+    onBackHomeClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PreviewViewModel = hiltViewModel()
 ) {
@@ -85,6 +95,7 @@ internal fun PreviewRoute(
         onPlay = viewModel::play,
         onStop = viewModel::stop,
         onBackClick = onBackClick,
+        onBackHomeClick = onBackHomeClick,
         onEnterFullScreen = viewModel::enterFullScreen,
         onExitFullScreen = viewModel::exitFullScreen,
         modifier = modifier
@@ -97,6 +108,7 @@ internal fun PreviewScreen(
     onPlay: (Int) -> Unit,
     onStop: () -> Unit,
     onBackClick: () -> Unit,
+    onBackHomeClick: () -> Unit,
     onEnterFullScreen: () -> Unit,
     onExitFullScreen: () -> Unit,
     modifier: Modifier = Modifier
@@ -109,6 +121,7 @@ internal fun PreviewScreen(
                     onPlay = onPlay,
                     onStop = onStop,
                     onBackClick = onBackClick,
+                    onBackHomeClick = onBackHomeClick,
                     onEnterFullScreen = onEnterFullScreen,
                     modifier = modifier.padding(it)
                 )
@@ -138,13 +151,16 @@ internal fun ExpandedPreviewScreen(
     DisposableEffect(Unit) {
         // 切换为传感器方向横屏，隐藏状态栏
         activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+            WindowCompat.setDecorFitsSystemWindows(window, true)
+        }
         windowInsetsController.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
+        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
         // 退出全屏时回退所有的配置
         onDispose {
             activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-            windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
+            windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
         }
     }
     BackHandler(onBack = onExitFullScreen)
@@ -153,10 +169,11 @@ internal fun ExpandedPreviewScreen(
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        CompactPlayer(
+        ExpandedPlayer(
+            name = previewUiState.name,
             playerState = previewUiState.playerState,
             onBack = onExitFullScreen,
-            onEnterFullScreen = onExitFullScreen,
+            onExitFullScreen = onExitFullScreen,
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(
@@ -174,6 +191,7 @@ internal fun CompactPreviewScreen(
     onPlay: (Int) -> Unit,
     onStop: () -> Unit,
     onBackClick: () -> Unit,
+    onBackHomeClick: () -> Unit,
     onEnterFullScreen: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -193,6 +211,14 @@ internal fun CompactPreviewScreen(
             onBackClick()
         }
     }
+    val onBackHome: () -> Unit = remember(onStop, activity, onBackHomeClick) {
+        {
+            activity.enableEdgeToEdge()
+            onStop()
+            isReadyToRelease = true
+            onBackHomeClick()
+        }
+    }
     BackHandler(onBack = onBack)
     Column(modifier = modifier) {
         Box(
@@ -204,6 +230,7 @@ internal fun CompactPreviewScreen(
             CompactPlayer(
                 playerState = previewUiState.playerState,
                 onBack = onBack,
+                onBackHome = onBackHome,
                 onEnterFullScreen = onEnterFullScreen,
                 modifier = Modifier.fillMaxSize(),
                 visible = !isReadyToRelease
@@ -235,6 +262,7 @@ internal fun CompactPreviewScreen(
 internal fun CompactPlayer(
     playerState: PlayerState,
     onBack: () -> Unit,
+    onBackHome: () -> Unit,
     onEnterFullScreen: () -> Unit,
     modifier: Modifier = Modifier,
     visible: Boolean = true
@@ -246,7 +274,31 @@ internal fun CompactPlayer(
         CompactPlayerController(
             state = playerState,
             onBack = onBack,
+            onBackHome = onBackHome,
             onEnterFullScreen = onEnterFullScreen,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
+@Composable
+internal fun ExpandedPlayer(
+    name: String,
+    playerState: PlayerState,
+    onBack: () -> Unit,
+    onExitFullScreen: () -> Unit,
+    modifier: Modifier = Modifier,
+    visible: Boolean = true
+) {
+    Player(
+        state = playerState,
+        modifier = modifier.alpha(if (visible) 1f else 0f)
+    ) {
+        ExpandedPlayerController(
+            name = name,
+            state = playerState,
+            onBack = onBack,
+            onExitFullScreen = onExitFullScreen,
             modifier = Modifier.fillMaxSize()
         )
     }
@@ -328,9 +380,9 @@ internal fun MovieSelection(
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
                         imageVector = if (expanded) {
-                            Icons.Outlined.KeyboardArrowDown
+                            Icons.Rounded.KeyboardArrowDown
                         } else {
-                            Icons.AutoMirrored.Outlined.KeyboardArrowRight
+                            Icons.AutoMirrored.Rounded.KeyboardArrowRight
                         },
                         contentDescription = null
                     )

@@ -9,8 +9,12 @@ internal class OnlineMoviesRepository @Inject constructor(
     private val networkSource: NetworkDataSource
 ): MoviesRepository {
 
-    override suspend fun fetchMovieList(keyword: String, pageIndex: Int): Result<MovieList> {
-        return networkSource.fetchMovieList(keyword, pageIndex).map { it.asExternalModel() }
+    override suspend fun fetchMovieList(
+        keyword: String,
+        pageIndex: Int,
+        type: Int
+    ): Result<MovieList> {
+        return networkSource.fetchMovieList(keyword, pageIndex, type).map { it.asExternalModel() }
     }
 
 }
