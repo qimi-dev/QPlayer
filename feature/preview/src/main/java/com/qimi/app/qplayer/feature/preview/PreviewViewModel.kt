@@ -68,7 +68,8 @@ class PreviewViewModel @Inject constructor(
     }
 
     fun play(selectedUrlIndex: Int) {
-        playerState.play(movieUrls[selectedUrlIndex].second)
+        playerState.prepare(movieUrls[selectedUrlIndex].second)
+        playerState.play()
         _previewUiState.update {
             it.copy(selectedUrlIndex = selectedUrlIndex)
         }

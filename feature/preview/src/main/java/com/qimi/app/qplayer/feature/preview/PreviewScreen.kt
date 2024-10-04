@@ -225,7 +225,7 @@ internal fun CompactPreviewScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
-                .background(if (!isReadyToRelease) Color.Black else Color.Transparent)
+                .background(Color.Black)
         ) {
             CompactPlayer(
                 playerState = previewUiState.playerState,
@@ -287,12 +287,11 @@ internal fun ExpandedPlayer(
     playerState: PlayerState,
     onBack: () -> Unit,
     onExitFullScreen: () -> Unit,
-    modifier: Modifier = Modifier,
-    visible: Boolean = true
+    modifier: Modifier = Modifier
 ) {
     Player(
         state = playerState,
-        modifier = modifier.alpha(if (visible) 1f else 0f)
+        modifier = modifier
     ) {
         ExpandedPlayerController(
             name = name,

@@ -8,6 +8,7 @@ import com.qimi.app.qplayer.core.model.data.MovieList
 import com.qimi.app.qplayer.core.ui.retry
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,44 +37,56 @@ class MainViewModel @Inject constructor(
     val mainUiState: StateFlow<MainUiState> = _mainUiState.asStateFlow()
 
     init {
-        fetchCommonMovies()
-        fetchLatestMovies()
-        fetchVarietyShowMovies()
+        fetchAllKindOfMovies()
     }
 
-    private fun fetchCommonMovies() = fetchMovies(type = 20) { res ->
+    fun fetchAllKindOfMovies(onCompleted: () -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _mainUiState.value = MainUiState(listOf(), listOf(), listOf())
+            val fetchCommonJob = launch {
+                fetchCommonMovies()
+            }
+            val fetchVarietyShowJob = launch {
+                fetchVarietyShowMovies()
+            }
+            val fetchLatestJob = launch {
+                fetchLatestMovies()
+            }
+            fetchCommonJob.join()
+            fetchVarietyShowJob.join()
+            fetchLatestJob.join()
+            launch(Dispatchers.Main) { onCompleted() }
+        }
+    }
+
+    private suspend fun fetchCommonMovies() = fetchMovies(type = 20) { res ->
         _mainUiState.update {
             it.copy(commonMovies = res.list)
         }
     }
 
-    private fun fetchVarietyShowMovies() = fetchMovies(type = 82) { res ->
+    private suspend fun fetchVarietyShowMovies() = fetchMovies(type = 82) { res ->
         _mainUiState.update {
             it.copy(varietyShowMovies = res.list)
         }
     }
 
-    private fun fetchLatestMovies() = fetchMovies { res ->
+    private suspend fun fetchLatestMovies() = fetchMovies { res ->
         _mainUiState.update {
             it.copy(latestMovies = res.list)
         }
     }
 
-    private fun fetchMovies(
-        type: Int = 0,
-        onSuccess: (MovieList) -> Unit
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            retry {
-                moviesRepository.fetchMovieList(type = type).onSuccess { res ->
-                    if (res.code != 1) {
-                        return@onSuccess
-                    }
-                    onSuccess(res)
-                    return@retry true
+    private suspend fun fetchMovies(type: Int = 0, onSuccess: (MovieList) -> Unit) {
+        retry {
+            moviesRepository.fetchMovieList(type = type).onSuccess { res ->
+                if (res.code != 1) {
+                    return@onSuccess
                 }
-                return@retry false
+                onSuccess(res)
+                return@retry true
             }
+            return@retry false
         }
     }
 

@@ -40,10 +40,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -75,6 +80,7 @@ internal fun MainRoute(
         mainUiState = mainUiState,
         onSearchMovie = onSearchMovie,
         onPreviewMovie = onPreviewMovie,
+        onRefreshMovies = viewModel::fetchAllKindOfMovies,
         modifier = modifier
     )
 }
@@ -85,6 +91,7 @@ internal fun MainScreen(
     mainUiState: MainUiState,
     onSearchMovie: () -> Unit,
     onPreviewMovie: (Movie) -> Unit,
+    onRefreshMovies: (() -> Unit) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -115,33 +122,47 @@ internal fun MainScreen(
         },
         modifier = modifier
     ) {
-        CompositionLocalProvider(
-            LocalOverscrollConfiguration provides null
+        val refreshState = rememberPullToRefreshState()
+        var isRefreshing by remember { mutableStateOf(false) }
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                isRefreshing = true
+                onRefreshMovies {
+                    isRefreshing = false
+                }
+            },
+            state = refreshState,
+            modifier = Modifier.fillMaxSize().padding(it)
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(it),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            CompositionLocalProvider(
+                LocalOverscrollConfiguration provides null
             ) {
-                item {
-                    CommonMoviesSection(
-                        movies = mainUiState.commonMovies,
-                        onPreviewMovie = onPreviewMovie,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                    )
-                }
-                item {
-                    VarietyShowMoviesSection(
-                        movies = mainUiState.varietyShowMovies,
-                        onPreviewMovie = onPreviewMovie,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                    )
-                }
-                item {
-                    LatestMoviesSection(
-                        movies = mainUiState.latestMovies,
-                        onPreviewMovie = onPreviewMovie,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                    )
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item {
+                        CommonMoviesSection(
+                            movies = mainUiState.commonMovies,
+                            onPreviewMovie = onPreviewMovie,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                        )
+                    }
+                    item {
+                        VarietyShowMoviesSection(
+                            movies = mainUiState.varietyShowMovies,
+                            onPreviewMovie = onPreviewMovie,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                        )
+                    }
+                    item {
+                        LatestMoviesSection(
+                            movies = mainUiState.latestMovies,
+                            onPreviewMovie = onPreviewMovie,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                        )
+                    }
                 }
             }
         }
