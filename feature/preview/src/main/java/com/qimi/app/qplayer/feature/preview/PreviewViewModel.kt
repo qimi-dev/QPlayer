@@ -2,8 +2,12 @@ package com.qimi.app.qplayer.feature.preview
 
 import android.content.Context
 import android.util.Log
+import android.view.Window
+import android.view.WindowManager
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.toRoute
 import com.qimi.app.qplayer.core.model.data.Movie
@@ -11,10 +15,19 @@ import com.qimi.app.qplayer.core.ui.PlayerState
 import com.qimi.app.qplayer.feature.preview.navigation.PreviewRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -44,51 +57,85 @@ class PreviewViewModel @Inject constructor(
             first to second
         }
 
-    private val exoPlayer: ExoPlayer = ExoPlayer.Builder(context).build()
+    val exoPlayer: ExoPlayer = ExoPlayer.Builder(context).build()
 
-    private val playerState: PlayerState = PlayerState(exoPlayer)
+    private var controllerStateHandler: Job? = null
 
-    private val _previewUiState: MutableStateFlow<PreviewUiState> =
-        MutableStateFlow(
-            PreviewUiState(
-                name = movie.name,
-                score = movie.score,
-                description = movie.content,
-                urls = movieUrls,
-                selectedUrlIndex = 0,
-                playerState = playerState,
-                previewMode = PreviewMode.NON_FULLSCREEN
+    private val controllerState: MutableStateFlow<Boolean> = MutableStateFlow(true)
+
+    private var volumeStateHandler: Job? = null
+
+    private val volumeState: MutableStateFlow<VolumeState> =
+        MutableStateFlow(VolumeState(false, exoPlayer.volume))
+
+    private var brightnessStateHandler: Job? = null
+
+    private val brightnessState: MutableStateFlow<BrightnessState> =
+        MutableStateFlow(BrightnessState(false, WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE))
+
+    val playerUiState: StateFlow<PlayerUiState> =
+        combine(controllerState, volumeState, brightnessState) {
+            controllerState, volumeState, brightnessState ->
+            PlayerUiState(
+                title = movie.name,
+                controllerState = controllerState,
+                setControllerVisibility = ::setControllerVisibility,
+                volumeState = volumeState,
+                adjustVolume = ::adjustVolume,
+                brightnessState = brightnessState,
+                adjustBrightness = ::adjustBrightness
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = PlayerUiState(
+                title = movie.name,
+                controllerState = controllerState.value,
+                setControllerVisibility = ::setControllerVisibility,
+                volumeState = volumeState.value,
+                adjustVolume = ::adjustVolume,
+                brightnessState = brightnessState.value,
+                adjustBrightness = ::adjustBrightness
             )
         )
 
-    val previewUiState: StateFlow<PreviewUiState> = _previewUiState.asStateFlow()
+    val contentUiState: StateFlow<ContentUiState> =
+        MutableStateFlow(ContentUiState(movie.name, movie.score, movie.content, movieUrls))
 
-    init {
-        play(0)
+    private fun setControllerVisibility(visibility: Boolean) {
+        val lastHandler: Job? = controllerStateHandler
+        controllerStateHandler = viewModelScope.launch {
+            lastHandler?.cancelAndJoin()
+            if (visibility) {
+                controllerState.value = true
+                delay(5_000)
+            }
+            controllerState.value = false
+        }
     }
 
-    fun play(selectedUrlIndex: Int) {
-        playerState.prepare(movieUrls[selectedUrlIndex].second)
-        playerState.play()
-        _previewUiState.update {
-            it.copy(selectedUrlIndex = selectedUrlIndex)
+    private fun adjustVolume(offsetPercent: Float) {
+        val lastHandler: Job? = volumeStateHandler
+        volumeStateHandler = viewModelScope.launch {
+            lastHandler?.cancelAndJoin()
+            val newVolume: Float = (exoPlayer.volume- offsetPercent).coerceIn(0f,1f)
+            exoPlayer.volume = newVolume
+            volumeState.value = VolumeState(true, newVolume)
+            delay(500)
+            volumeState.value = VolumeState(false, newVolume)
+        }
+    }
+
+    private fun adjustBrightness(offsetPercent: Float) {
+        val lastHandler: Job? = brightnessStateHandler
+        brightnessStateHandler = viewModelScope.launch {
+            lastHandler?.cancelAndJoin()
+
         }
     }
 
     fun stop() {
         exoPlayer.stop()
-    }
-
-    fun enterFullScreen() {
-        _previewUiState.update {
-            it.copy(previewMode = PreviewMode.FULLSCREEN)
-        }
-    }
-
-    fun exitFullScreen() {
-        _previewUiState.update {
-            it.copy(previewMode = PreviewMode.NON_FULLSCREEN)
-        }
     }
 
     override fun onCleared() {
@@ -97,17 +144,30 @@ class PreviewViewModel @Inject constructor(
 
 }
 
-data class PreviewUiState(
+data class PlayerUiState(
+    val title: String,
+    val controllerState: Boolean,
+    val setControllerVisibility: (Boolean) -> Unit,
+    val volumeState: VolumeState,
+    val adjustVolume: (Float) -> Unit,
+    val brightnessState: BrightnessState,
+    val adjustBrightness: (Float) -> Unit
+)
+
+data class ContentUiState(
     val name: String,
     val score: String,
     val description: String,
-    val urls: List<Pair<String, String>>,
-    val selectedUrlIndex: Int,
-    val playerState: PlayerState,
-    val previewMode: PreviewMode
+    val urls: List<Pair<String, String>>
 )
 
-enum class PreviewMode {
-    NON_FULLSCREEN, FULLSCREEN
-}
+data class VolumeState(
+    val isShow: Boolean,
+    val volume: Float
+)
+
+data class BrightnessState(
+    val isShow: Boolean,
+    val brightness: Float
+)
 

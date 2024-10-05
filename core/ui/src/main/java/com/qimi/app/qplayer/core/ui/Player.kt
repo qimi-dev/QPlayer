@@ -1,8 +1,13 @@
 package com.qimi.app.qplayer.core.ui
 
+import android.content.ContentResolver
 import android.content.Context
 import android.media.AudioManager
+import android.provider.Settings
 import android.util.Log
+import android.view.Window
+import android.view.WindowManager
+import androidx.activity.ComponentActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -16,6 +21,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -49,21 +55,15 @@ import kotlinx.coroutines.delay
 import java.util.Date
 import kotlin.math.absoluteValue
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Player(
+    state: PlayerState,
     modifier: Modifier = Modifier,
-    state: PlayerState = rememberPlayerState(),
     playerController: @Composable BoxScope.(PlayerState) -> Unit = {}
 ) {
     val context: Context = LocalContext.current
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.loading))
     val progress by animateLottieCompositionAsState(composition, iterations = LottieConstants.IterateForever)
-    var touchWidth: Int by remember { mutableIntStateOf(0) }
-    var touchHeight: Int by remember { mutableIntStateOf(0) }
-    var dragX: Float by remember { mutableFloatStateOf(0f) }
-    var dragY: Float by remember { mutableFloatStateOf(0f) }
-    val shouldShowController: Boolean by state.produceControllerState()
     Box(modifier = modifier) {
         AndroidView(
             factory = { PlayerView(context) },
@@ -90,57 +90,13 @@ fun Player(
                 )
             }
         }
-        Spacer(
-            modifier = Modifier
-                .fillMaxSize()
-                .onSizeChanged {
-                    touchWidth = it.width
-                    touchHeight = it.height
-                }
-                .draggable2D(
-                    onDragStarted = {
-                        dragX = it.x
-                        dragY = it.y
-                    },
-                    state = rememberDraggable2DState { delta ->
-                        if (delta.x.absoluteValue < delta.y.absoluteValue) {
-                            // 高度大于宽度，判断为亮度、声音调节
-                            if (dragX < touchWidth / 2) {
-
-                            } else {
-                                state.adjustVolume(delta.y / touchHeight)
-                            }
-                        } else {
-                            // 宽度大于高度，判断为进度调节
-
-                        }
-                    }
-                )
-                .combinedClickable(
-                    interactionSource = null,
-                    indication = null,
-                    onClick = {
-                        if (shouldShowController) {
-                            state.hideController()
-                        } else {
-                            state.showController()
-                        }
-                    },
-                    onDoubleClick = {
-                        if (state.shouldShowPlayButton) {
-                            if (state.isPlaying) state.pause() else state.play()
-                        }
-                    }
-                )
-        )
         playerController(state)
     }
 }
 
 @Composable
-fun rememberPlayerState(): PlayerState {
-    val context: Context = LocalContext.current
-    return remember { PlayerState(ExoPlayer.Builder(context).build()) }
+fun rememberPlayerState(exoPlayer: ExoPlayer): PlayerState {
+    return remember { PlayerState(exoPlayer) }
 }
 
 @Stable
@@ -153,10 +109,6 @@ class PlayerState(internal val player: ExoPlayer) {
     private var isPlayWhenReady: Boolean by mutableStateOf(player.playWhenReady)
 
     private var playbackSuppressionReason: Int by mutableIntStateOf(player.playbackSuppressionReason)
-
-    private var showControllerSignal: Date? by mutableStateOf(null)
-
-    private var shouldShowController: Boolean = true
 
     val shouldShowPlayButton: Boolean by derivedStateOf {
         availableCommands.contains(Player.COMMAND_PLAY_PAUSE)
@@ -172,10 +124,6 @@ class PlayerState(internal val player: ExoPlayer) {
     val isBuffering: Boolean by derivedStateOf {
         playbackState == Player.STATE_BUFFERING
     }
-
-    private var showVolumeSignal: Date? by mutableStateOf(null)
-
-    private var volume: Float = player.volume
 
     init {
         player.addListener(object : Player.Listener {
@@ -194,11 +142,6 @@ class PlayerState(internal val player: ExoPlayer) {
 
             override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
                 this@PlayerState.playbackSuppressionReason = playbackSuppressionReason
-            }
-
-            override fun onVolumeChanged(volume: Float) {
-                this@PlayerState.volume = volume
-                showVolumeSignal = Date()
             }
 
         })
@@ -228,61 +171,6 @@ class PlayerState(internal val player: ExoPlayer) {
         }
     }
 
-    fun showController() {
-        shouldShowController = true
-        showControllerSignal = Date()
-    }
-
-    fun hideController() {
-        shouldShowController = false
-        showControllerSignal = Date()
-    }
-
-    @Composable
-    fun produceControllerState(): State<Boolean> {
-        return produceState(
-            initialValue = true,
-            key1 = showControllerSignal
-        ) {
-            if (showControllerSignal == null) {
-                return@produceState
-            }
-            if (shouldShowController) {
-                value = true
-                delay(5_000)
-                shouldShowController = false
-            }
-            value = false
-        }
-    }
-
-    fun adjustVolume(volume: Float) {
-        if (!player.isCommandAvailable(Player.COMMAND_SET_VOLUME) or
-            !player.isCommandAvailable(Player.COMMAND_GET_VOLUME)) {
-            return
-        }
-        showVolumeSignal = Date()
-        player.volume = (player.volume - volume).coerceIn(0f, 1f)
-    }
-
-    @Composable
-    fun produceVolumeState(): State<VolumeState> {
-        return produceState(
-            initialValue = VolumeState(
-                isShow = false,
-                volume = volume
-            ),
-            key1 = showVolumeSignal
-        ) {
-            if (showVolumeSignal == null) {
-                return@produceState
-            }
-            value = VolumeState(isShow = true, volume = volume)
-            delay(500)
-            value = VolumeState(isShow = false, volume = volume)
-        }
-    }
-
     fun getContentPercentage(): Float {
         if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
             return 0f
@@ -300,11 +188,7 @@ class PlayerState(internal val player: ExoPlayer) {
 
 }
 
-@Stable
-data class VolumeState(
-    val isShow: Boolean,
-    val volume: Float
-)
+
 
 
 

@@ -1,7 +1,9 @@
 package com.qimi.app.qplayer.feature.preview
 
+import android.content.ContentResolver
 import android.content.pm.ActivityInfo
 import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.view.Window
@@ -13,6 +15,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -37,11 +40,14 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -50,14 +56,18 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -67,6 +77,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,11 +87,15 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.qimi.app.qplayer.core.ui.CompactPlayerController
-import com.qimi.app.qplayer.core.ui.ExpandedPlayerController
+import com.qimi.app.qplayer.core.ui.BackButton
+import com.qimi.app.qplayer.core.ui.FullscreenButton
+import com.qimi.app.qplayer.core.ui.HomeButton
+import com.qimi.app.qplayer.core.ui.PlayButton
+import com.qimi.app.qplayer.core.ui.PlayProgressBar
 import com.qimi.app.qplayer.core.ui.Player
+import com.qimi.app.qplayer.core.ui.PlayerController
 import com.qimi.app.qplayer.core.ui.PlayerState
-import okhttp3.internal.toHexString
+import com.qimi.app.qplayer.core.ui.rememberPlayerState
 
 @Composable
 internal fun PreviewRoute(
@@ -89,57 +104,89 @@ internal fun PreviewRoute(
     modifier: Modifier = Modifier,
     viewModel: PreviewViewModel = hiltViewModel()
 ) {
-    val previewUiState: PreviewUiState by viewModel.previewUiState.collectAsState()
+    val playerUiState: PlayerUiState by viewModel.playerUiState.collectAsState()
+    val contentUiState: ContentUiState by viewModel.contentUiState.collectAsState()
+    val playerState: PlayerState = rememberPlayerState(viewModel.exoPlayer)
     PreviewScreen(
-        previewUiState = previewUiState,
-        onPlay = viewModel::play,
+        playerUiState = playerUiState,
+        contentUiState = contentUiState,
+        playerState = playerState,
         onStop = viewModel::stop,
         onBackClick = onBackClick,
         onBackHomeClick = onBackHomeClick,
-        onEnterFullScreen = viewModel::enterFullScreen,
-        onExitFullScreen = viewModel::exitFullScreen,
         modifier = modifier
     )
 }
 
 @Composable
 internal fun PreviewScreen(
-    previewUiState: PreviewUiState,
-    onPlay: (Int) -> Unit,
+    playerUiState: PlayerUiState,
+    contentUiState: ContentUiState,
+    playerState: PlayerState,
     onStop: () -> Unit,
     onBackClick: () -> Unit,
     onBackHomeClick: () -> Unit,
-    onEnterFullScreen: () -> Unit,
-    onExitFullScreen: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var isFullscreen: Boolean by rememberSaveable { mutableStateOf(false) }
+    var selectedUrlIndex: Int by rememberSaveable { mutableIntStateOf(0) }
+    var lastSelectedUrlIndex: Int by rememberSaveable { mutableIntStateOf(-1) }
+    LaunchedEffect(selectedUrlIndex) {
+        if (lastSelectedUrlIndex == selectedUrlIndex) {
+            return@LaunchedEffect
+        }
+        lastSelectedUrlIndex = selectedUrlIndex
+        playerState.prepare(
+            contentUiState.urls[selectedUrlIndex].second
+        )
+        playerState.play()
+    }
+
+    val activity: ComponentActivity = LocalContext.current as ComponentActivity
+    val window: Window = activity.window
+    DisposableEffect(Unit) {
+        val contentResolver: ContentResolver = activity.contentResolver
+        val brightness: Float = Settings.System
+            .getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS) / 255f
+        val attributes = window.attributes
+        attributes.screenBrightness = brightness
+        window.attributes = attributes
+        onDispose {
+            attributes.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+            window.attributes = attributes
+        }
+    }
     Scaffold {
-        when (previewUiState.previewMode) {
-            PreviewMode.NON_FULLSCREEN -> {
-                CompactPreviewScreen(
-                    previewUiState = previewUiState,
-                    onPlay = onPlay,
-                    onStop = onStop,
-                    onBackClick = onBackClick,
-                    onBackHomeClick = onBackHomeClick,
-                    onEnterFullScreen = onEnterFullScreen,
-                    modifier = modifier.padding(it)
-                )
-            }
-            PreviewMode.FULLSCREEN -> {
-                ExpandedPreviewScreen(
-                    previewUiState = previewUiState,
-                    onExitFullScreen = onExitFullScreen,
-                    modifier = modifier.padding(it)
-                )
-            }
+        if (!isFullscreen) {
+            CompactPreviewScreen(
+                playerUiState = playerUiState,
+                contentUiState = contentUiState,
+                playerState = playerState,
+                selectedUrlIndex = selectedUrlIndex,
+                onPlay = { selectedUrlIndex = it },
+                onStop = onStop,
+                onBackClick = onBackClick,
+                onBackHomeClick = onBackHomeClick,
+                onEnterFullScreen = { isFullscreen = true },
+                modifier = modifier.padding(it)
+            )
+        } else {
+            ExpandedPreviewScreen(
+                playerUiState = playerUiState,
+                contentUiState = contentUiState,
+                playerState = playerState,
+                onExitFullScreen = { isFullscreen = false },
+                modifier = modifier.padding(it)
+            )
         }
     }
 }
 
 @Composable
 internal fun ExpandedPreviewScreen(
-    previewUiState: PreviewUiState,
+    playerUiState: PlayerUiState,
+    contentUiState: ContentUiState,
+    playerState: PlayerState,
     onExitFullScreen: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -170,8 +217,9 @@ internal fun ExpandedPreviewScreen(
             .background(Color.Black)
     ) {
         ExpandedPlayer(
-            name = previewUiState.name,
-            playerState = previewUiState.playerState,
+            playerUiState = playerUiState,
+            contentUiState = contentUiState,
+            playerState = playerState,
             onBack = onExitFullScreen,
             onExitFullScreen = onExitFullScreen,
             modifier = Modifier
@@ -187,7 +235,10 @@ internal fun ExpandedPreviewScreen(
 
 @Composable
 internal fun CompactPreviewScreen(
-    previewUiState: PreviewUiState,
+    playerUiState: PlayerUiState,
+    contentUiState: ContentUiState,
+    playerState: PlayerState,
+    selectedUrlIndex: Int,
     onPlay: (Int) -> Unit,
     onStop: () -> Unit,
     onBackClick: () -> Unit,
@@ -203,19 +254,22 @@ internal fun CompactPreviewScreen(
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.BLACK)
         )
     }
-    val onBack: () -> Unit = remember(onStop, activity, onBackClick) {
+    val onBackHandle: () -> Unit = remember(onStop, activity) {
         {
             activity.enableEdgeToEdge()
             onStop()
             isReadyToRelease = true
+        }
+    }
+    val onBack: () -> Unit = remember(onStop, activity, onBackClick) {
+        {
+            onBackHandle()
             onBackClick()
         }
     }
     val onBackHome: () -> Unit = remember(onStop, activity, onBackHomeClick) {
         {
-            activity.enableEdgeToEdge()
-            onStop()
-            isReadyToRelease = true
+            onBackHandle()
             onBackHomeClick()
         }
     }
@@ -228,7 +282,8 @@ internal fun CompactPreviewScreen(
                 .background(Color.Black)
         ) {
             CompactPlayer(
-                playerState = previewUiState.playerState,
+                playerUiState = playerUiState,
+                playerState = playerState,
                 onBack = onBack,
                 onBackHome = onBackHome,
                 onEnterFullScreen = onEnterFullScreen,
@@ -242,15 +297,15 @@ internal fun CompactPreviewScreen(
         ) {
             item {
                 MovieDescription(
-                    name = previewUiState.name,
-                    score = previewUiState.score,
-                    description = previewUiState.description
+                    name = contentUiState.name,
+                    score = contentUiState.score,
+                    description = contentUiState.description
                 )
             }
             item {
                 MovieSelection(
-                    urls = previewUiState.urls,
-                    selectedIndex = previewUiState.selectedUrlIndex,
+                    urls = contentUiState.urls,
+                    selectedIndex = selectedUrlIndex,
                     onSelectIndex = onPlay
                 )
             }
@@ -260,6 +315,7 @@ internal fun CompactPreviewScreen(
 
 @Composable
 internal fun CompactPlayer(
+    playerUiState: PlayerUiState,
     playerState: PlayerState,
     onBack: () -> Unit,
     onBackHome: () -> Unit,
@@ -267,38 +323,186 @@ internal fun CompactPlayer(
     modifier: Modifier = Modifier,
     visible: Boolean = true
 ) {
+    val shouldShowController: Boolean = playerUiState.controllerState
+    val volumeState: VolumeState = playerUiState.volumeState
     Player(
         state = playerState,
         modifier = modifier.alpha(if (visible) 1f else 0f)
     ) {
-        CompactPlayerController(
-            state = playerState,
-            onBack = onBack,
-            onBackHome = onBackHome,
-            onEnterFullScreen = onEnterFullScreen,
-            modifier = Modifier.fillMaxSize()
+        PlayerController(
+            onClick = {
+                // 单点屏幕显示控制台
+                playerUiState.setControllerVisibility(!shouldShowController)
+            },
+            onDoubleClick = {
+                // 双击屏幕开始、暂停视频
+                if (playerState.isPlaying) playerState.pause() else playerState.play()
+            },
+            onAdjustVolume = playerUiState.adjustVolume,
+            onAdjustBrightness = playerUiState.adjustBrightness,
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                if (shouldShowController) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        BackButton(onBack = onBack)
+                        HomeButton(onBackHome = onBackHome)
+                    }
+                }
+            },
+            content = {
+                VolumeIndicator(
+                    volumeState = volumeState,
+                    modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.5f)
+                )
+//                BrightnessIndicator(
+//                    brightnessState = brightnessState,
+//                    modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.5f)
+//                )
+            },
+            bottomBar = {
+                if (shouldShowController) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (playerState.shouldShowPlayButton) {
+                            PlayButton(
+                                onClick = {
+                                    playerUiState.setControllerVisibility(true)
+                                    if (playerState.isPlaying) playerState.pause() else playerState.play()
+                                },
+                                iconPainter = painterResource(
+                                    if (playerState.isPlaying) com.qimi.app.qplayer.core.ui.R.drawable.ic_pause_24 else com.qimi.app.qplayer.core.ui.R.drawable.ic_play_arrow_24
+                                ),
+                                modifier = Modifier.wrapContentSize()
+                            )
+                        }
+                        PlayProgressBar(
+                            onSeekTo = {
+                                playerUiState.setControllerVisibility(true)
+                                playerState.seekTo(it)
+                            },
+                            onReceiveContentPercentage = playerState::getContentPercentage,
+                            onReceiveBufferedPercentage = playerState::getBufferedPercentage,
+                            modifier = Modifier.weight(1f)
+                        )
+                        FullscreenButton(
+                            onClick = {
+                                playerUiState.setControllerVisibility(true)
+                                onEnterFullScreen()
+                            },
+                            iconPainter = painterResource(com.qimi.app.qplayer.core.ui.R.drawable.ic_fullscreen_24),
+                            modifier = Modifier.wrapContentSize()
+                        )
+                    }
+                }
+            }
         )
     }
 }
 
 @Composable
 internal fun ExpandedPlayer(
-    name: String,
+    playerUiState: PlayerUiState,
+    contentUiState: ContentUiState,
     playerState: PlayerState,
     onBack: () -> Unit,
     onExitFullScreen: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val shouldShowController: Boolean = playerUiState.controllerState
+    val volumeState: VolumeState = playerUiState.volumeState
     Player(
         state = playerState,
         modifier = modifier
     ) {
-        ExpandedPlayerController(
-            name = name,
-            state = playerState,
-            onBack = onBack,
-            onExitFullScreen = onExitFullScreen,
-            modifier = Modifier.fillMaxSize()
+        PlayerController(
+            onClick = {
+                // 单点屏幕显示控制台
+                playerUiState.setControllerVisibility(!shouldShowController)
+            },
+            onDoubleClick = {
+                // 双击屏幕开始、暂停视频
+                if (playerState.isPlaying) playerState.pause() else playerState.play()
+            },
+            onAdjustVolume = playerUiState.adjustVolume,
+            onAdjustBrightness = playerUiState.adjustBrightness,
+            modifier = modifier,
+            topBar = {
+                if (shouldShowController) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        BackButton(onBack = onBack)
+                        Text(
+                            text = contentUiState.name,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+            },
+            content = {
+                VolumeIndicator(
+                    volumeState = volumeState,
+                    modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.5f)
+                )
+//                BrightnessIndicator(
+//                    brightnessState = brightnessState,
+//                    modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.5f)
+//                )
+            },
+            bottomBar = {
+                if (shouldShowController) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.Black.copy(alpha = 0.3f))
+                            .padding(bottom = 8.dp)
+                    ) {
+                        PlayProgressBar(
+                            onSeekTo = {
+                                playerUiState.setControllerVisibility(true)
+                                playerState.seekTo(it)
+                            },
+                            onReceiveContentPercentage = playerState::getContentPercentage,
+                            onReceiveBufferedPercentage = playerState::getBufferedPercentage,
+                            modifier = Modifier.fillMaxWidth().wrapContentHeight()
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (playerState.shouldShowPlayButton) {
+                                PlayButton(
+                                    onClick = {
+                                        playerUiState.setControllerVisibility(true)
+                                        if (playerState.isPlaying) playerState.pause() else playerState.play()
+                                    },
+                                    iconPainter = painterResource(
+                                        if (playerState.isPlaying) com.qimi.app.qplayer.core.ui.R.drawable.ic_pause_24  else com.qimi.app.qplayer.core.ui.R.drawable.ic_play_arrow_24
+                                    ),
+                                    modifier = Modifier.wrapContentSize()
+                                )
+                            }
+                            FullscreenButton(
+                                onClick = {
+                                    playerUiState.setControllerVisibility(true)
+                                    onExitFullScreen()
+                                },
+                                iconPainter = painterResource(com.qimi.app.qplayer.core.ui.R.drawable.ic_fullscreen_24),
+                                modifier = Modifier.wrapContentSize()
+                            )
+                        }
+                    }
+                }
+            }
         )
     }
 }
@@ -426,6 +630,80 @@ internal fun MovieSelection(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun VolumeIndicator(
+    volumeState: VolumeState,
+    modifier: Modifier = Modifier
+) {
+    val animatedProgress by animateFloatAsState(
+        targetValue = volumeState.volume,
+        animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
+    )
+    if (volumeState.isShow) {
+        Surface(
+            modifier = modifier,
+            shape = CircleShape,
+            color = Color.Black.copy(alpha = 0.3f),
+            contentColor = MaterialTheme.colorScheme.surface
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp)
+            ) {
+                Icon(
+                    painter = painterResource(
+                        if (animatedProgress == 0f) com.qimi.app.qplayer.core.ui.R.drawable.ic_volume_off_24 else com.qimi.app.qplayer.core.ui.R.drawable.ic_volume_up_24
+                    ),
+                    contentDescription = null
+                )
+                LinearProgressIndicator(
+                    progress = { animatedProgress },
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.surface,
+                    trackColor = MaterialTheme.colorScheme.outline
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun BrightnessIndicator(
+    brightnessState: BrightnessState,
+    modifier: Modifier = Modifier
+) {
+    val animatedProgress by animateFloatAsState(
+        targetValue = brightnessState.brightness,
+        animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
+    )
+    if (brightnessState.isShow) {
+        Surface(
+            modifier = modifier,
+            shape = CircleShape,
+            color = Color.Black.copy(alpha = 0.3f),
+            contentColor = MaterialTheme.colorScheme.surface
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp)
+            ) {
+                Icon(
+                    painter = painterResource(com.qimi.app.qplayer.core.ui.R.drawable.ic_brightness_24),
+                    contentDescription = null
+                )
+                LinearProgressIndicator(
+                    progress = { animatedProgress },
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.surface,
+                    trackColor = MaterialTheme.colorScheme.outline
+                )
             }
         }
     }

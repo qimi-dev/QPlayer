@@ -1,9 +1,16 @@
 package com.qimi.app.qplayer.core.ui
 
+import android.view.Window
+import android.view.WindowManager
+import androidx.activity.ComponentActivity
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.draggable2D
+import androidx.compose.foundation.gestures.rememberDraggable2DState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -29,6 +36,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -44,179 +52,66 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlin.math.absoluteValue
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ExpandedPlayerController(
-    name: String,
-    state: PlayerState,
-    onBack: () -> Unit,
-    onExitFullScreen: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val shouldShowController: Boolean by state.produceControllerState()
-    val volumeState: VolumeState by state.produceVolumeState()
-    PlayerController(
-        modifier = modifier,
-        topBar = {
-            if (shouldShowController) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    BackButton(onBack = onBack)
-                    Text(
-                        text = name,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-            }
-        },
-        content = {
-            if (volumeState.isShow) {
-                VolumeIndicator(
-                    volume = volumeState.volume,
-                    modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.5f)
-                )
-            }
-        },
-        bottomBar = {
-            if (shouldShowController) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.Black.copy(alpha = 0.3f))
-                        .padding(bottom = 8.dp)
-                ) {
-                    PlayProgressBar(
-                        onSeekTo = {
-                            state.showController()
-                            state.seekTo(it)
-                        },
-                        onReceiveContentPercentage = state::getContentPercentage,
-                        onReceiveBufferedPercentage = state::getBufferedPercentage,
-                        modifier = Modifier.fillMaxWidth().wrapContentHeight()
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (state.shouldShowPlayButton) {
-                            PlayButton(
-                                onClick = {
-                                    state.showController()
-                                    if (state.isPlaying) state.pause() else state.play()
-                                },
-                                iconPainter = painterResource(
-                                    if (state.isPlaying) R.drawable.ic_pause_24  else R.drawable.ic_play_arrow_24
-                                ),
-                                modifier = Modifier.wrapContentSize()
-                            )
-                        }
-                        FullscreenButton(
-                            onClick = {
-                                state.showController()
-                                onExitFullScreen()
-                            },
-                            iconPainter = painterResource(R.drawable.ic_fullscreen_24),
-                            modifier = Modifier.wrapContentSize()
-                        )
-                    }
-                }
-            }
-        }
-    )
-}
-
-@Composable
-fun CompactPlayerController(
-    state: PlayerState,
-    onBack: () -> Unit,
-    onBackHome: () -> Unit,
-    onEnterFullScreen: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val shouldShowController: Boolean by state.produceControllerState()
-    val volumeState: VolumeState by state.produceVolumeState()
-    PlayerController(
-        modifier = modifier,
-        topBar = {
-            if (shouldShowController) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    BackButton(onBack = onBack)
-                    HomeButton(onBackHome = onBackHome)
-                }
-            }
-        },
-        content = {
-            if (volumeState.isShow) {
-                VolumeIndicator(
-                    volume = volumeState.volume,
-                    modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.5f)
-                )
-            }
-        },
-        bottomBar = {
-            if (shouldShowController) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (state.shouldShowPlayButton) {
-                        PlayButton(
-                            onClick = {
-                                state.showController()
-                                if (state.isPlaying) state.pause() else state.play()
-                            },
-                            iconPainter = painterResource(
-                                if (state.isPlaying) R.drawable.ic_pause_24 else R.drawable.ic_play_arrow_24
-                            ),
-                            modifier = Modifier.wrapContentSize()
-                        )
-                    }
-                    PlayProgressBar(
-                        onSeekTo = {
-                            state.showController()
-                            state.seekTo(it)
-                        },
-                        onReceiveContentPercentage = state::getContentPercentage,
-                        onReceiveBufferedPercentage = state::getBufferedPercentage,
-                        modifier = Modifier.weight(1f)
-                    )
-                    FullscreenButton(
-                        onClick = {
-                            state.showController()
-                            onEnterFullScreen()
-                        },
-                        iconPainter = painterResource(R.drawable.ic_fullscreen_24),
-                        modifier = Modifier.wrapContentSize()
-                    )
-                }
-            }
-        }
-    )
-}
-
-@Composable
-internal fun PlayerController(
+fun PlayerController(
     modifier: Modifier = Modifier,
     topBar: @Composable () -> Unit = {},
     content: @Composable BoxScope.() -> Unit = {},
-    bottomBar: @Composable () -> Unit = {}
+    bottomBar: @Composable () -> Unit = {},
+    onClick: () -> Unit = {},
+    onDoubleClick: () -> Unit = {},
+    onAdjustBrightness: (Float) -> Unit = {},
+    onAdjustVolume: (Float) -> Unit = {}
 ) {
+    var touchableWidth: Int by remember { mutableIntStateOf(0) }
+    var touchableHeight: Int by remember { mutableIntStateOf(0) }
+    var dragX: Float by remember { mutableFloatStateOf(0f) }
+    var dragY: Float by remember { mutableFloatStateOf(0f) }
     CompositionLocalProvider(
         LocalContentColor provides MaterialTheme.colorScheme.surface
     ) {
-        Box(modifier = modifier) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .onSizeChanged {
+                    touchableWidth = it.width
+                    touchableHeight = it.height
+                }
+                .draggable2D(
+                    onDragStarted = {
+                        dragX = it.x
+                        dragY = it.y
+                    },
+                    state = rememberDraggable2DState { delta ->
+                        if (delta.x.absoluteValue < delta.y.absoluteValue) {
+                            // 高度大于宽度，判断为亮度、声音调节
+                            if (dragX < touchableWidth / 2) {
+                                onAdjustBrightness(delta.y / touchableHeight)
+                            } else {
+                                onAdjustVolume(delta.y / touchableHeight)
+                            }
+                        } else {
+                            // 宽度大于高度，判断为进度调节
+
+                        }
+                    }
+                )
+                .combinedClickable(
+                    interactionSource = null,
+                    indication = null,
+                    onClick = onClick,
+                    onDoubleClick = onDoubleClick
+                )
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -244,7 +139,7 @@ internal fun PlayerController(
 }
 
 @Composable
-internal fun BackButton(
+fun BackButton(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -260,7 +155,7 @@ internal fun BackButton(
 }
 
 @Composable
-internal fun HomeButton(
+fun HomeButton(
     onBackHome: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -276,7 +171,7 @@ internal fun HomeButton(
 }
 
 @Composable
-internal fun PlayButton(
+fun PlayButton(
     onClick: () -> Unit,
     iconPainter: Painter,
     modifier: Modifier = Modifier
@@ -298,7 +193,7 @@ internal fun PlayButton(
 }
 
 @Composable
-internal fun PlayProgressBar(
+fun PlayProgressBar(
     onSeekTo: (Float) -> Unit,
     onReceiveContentPercentage: () -> Float,
     onReceiveBufferedPercentage: () -> Float,
@@ -358,7 +253,7 @@ private fun ProgressBarTrack(
 }
 
 @Composable
-internal fun FullscreenButton(
+fun FullscreenButton(
     onClick: () -> Unit,
     iconPainter: Painter,
     modifier: Modifier = Modifier
@@ -374,38 +269,24 @@ internal fun FullscreenButton(
     }
 }
 
-@Composable
-internal fun VolumeIndicator(
-    volume: Float,
-    modifier: Modifier = Modifier
-) {
-    val animatedProgress by animateFloatAsState(
-        targetValue = volume,
-        animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
-    )
-    Surface(
-        modifier = modifier,
-        shape = CircleShape,
-        color = Color.Black.copy(alpha = 0.3f),
-        contentColor = MaterialTheme.colorScheme.surface
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp)
-        ) {
-            Icon(
-                painter = painterResource(
-                    if (animatedProgress == 0f) R.drawable.ic_volume_off_24 else R.drawable.ic_volume_24
-                ),
-                contentDescription = null
-            )
-            LinearProgressIndicator(
-                progress = { animatedProgress },
-                modifier = Modifier.weight(1f),
-                color = MaterialTheme.colorScheme.surface,
-                trackColor = MaterialTheme.colorScheme.outline
-            )
-        }
-    }
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
