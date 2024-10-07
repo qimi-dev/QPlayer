@@ -1,5 +1,6 @@
 package com.qimi.app.qplayer.core.ui
 
+import android.util.Log
 import android.view.Window
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -53,6 +54,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
@@ -70,12 +72,17 @@ fun PlayerController(
     onClick: () -> Unit = {},
     onDoubleClick: () -> Unit = {},
     onAdjustBrightness: (Float) -> Unit = {},
-    onAdjustVolume: (Float) -> Unit = {}
+    onAdjustVolume: (Float) -> Unit = {},
+    onAdjustProgress: (Float) -> Unit = {}
 ) {
     var touchableWidth: Int by remember { mutableIntStateOf(0) }
     var touchableHeight: Int by remember { mutableIntStateOf(0) }
     var dragX: Float by remember { mutableFloatStateOf(0f) }
     var dragY: Float by remember { mutableFloatStateOf(0f) }
+    val effectiveDistance: Float = LocalDensity.current.run { 24.dp.toPx() }
+    var isEffectiveTouch: Boolean by remember { mutableStateOf(true) }
+    var isProgressControl: Boolean by remember { mutableStateOf(false) }
+    var dragDistanceX: Float by remember { mutableFloatStateOf(0f) }
     CompositionLocalProvider(
         LocalContentColor provides MaterialTheme.colorScheme.surface
     ) {
@@ -90,18 +97,42 @@ fun PlayerController(
                     onDragStarted = {
                         dragX = it.x
                         dragY = it.y
+                        // 判断起点是否在有效范围内
+                        if (dragX < effectiveDistance || dragX > (touchableWidth - effectiveDistance)) {
+                            // 水平方向超出距离
+                            isEffectiveTouch = false
+                        } else if (dragY < effectiveDistance || dragY > (touchableHeight - effectiveDistance)) {
+                            // 垂直方向超出距离
+                            isEffectiveTouch = false
+                        } else {
+                            isEffectiveTouch = true
+                        }
+                    },
+                    onDragStopped = {
+                        // 判断是否为进度调节
+                        if (isProgressControl) {
+                            onAdjustProgress(dragDistanceX / touchableWidth)
+
+                            isProgressControl = false
+                            dragDistanceX = 0f
+                        }
                     },
                     state = rememberDraggable2DState { delta ->
-                        if (delta.x.absoluteValue < delta.y.absoluteValue) {
-                            // 高度大于宽度，判断为亮度、声音调节
+                        if (!isEffectiveTouch) {
+                            // 当前触摸无效
+                            return@rememberDraggable2DState
+                        }
+                        if (delta.x.absoluteValue > delta.y.absoluteValue || isProgressControl) {
+                            // 当前为进度调节，记录滑动距离
+                            isProgressControl = true
+                            dragDistanceX += delta.x
+                        } else {
+                            // 非进度调节，判断是否为亮度、声音调节
                             if (dragX < touchableWidth / 2) {
                                 onAdjustBrightness(delta.y / touchableHeight)
                             } else {
                                 onAdjustVolume(delta.y / touchableHeight)
                             }
-                        } else {
-                            // 宽度大于高度，判断为进度调节
-
                         }
                     }
                 )
@@ -194,19 +225,11 @@ fun PlayButton(
 
 @Composable
 fun PlayProgressBar(
+    contentPercentage: Float,
+    bufferedPercentage: Float,
     onSeekTo: (Float) -> Unit,
-    onReceiveContentPercentage: () -> Float,
-    onReceiveBufferedPercentage: () -> Float,
     modifier: Modifier = Modifier
 ) {
-    val percentages by produceState(0f to 0f) {
-        while (true) {
-            val contentPercentage = onReceiveContentPercentage()
-            val bufferedPercentage = onReceiveBufferedPercentage()
-            value = contentPercentage to bufferedPercentage
-            delay(1000)
-        }
-    }
     var containerWidth: Int by remember { mutableIntStateOf(0) }
     Box(
         modifier = modifier
@@ -230,11 +253,11 @@ fun PlayProgressBar(
         )
         ProgressBarTrack(
             color = MaterialTheme.colorScheme.outlineVariant,
-            modifier = Modifier.fillMaxWidth(percentages.second)
+            modifier = Modifier.fillMaxWidth(bufferedPercentage)
         )
         ProgressBarTrack(
             color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.fillMaxWidth(percentages.first)
+            modifier = Modifier.fillMaxWidth(contentPercentage)
         )
     }
 }

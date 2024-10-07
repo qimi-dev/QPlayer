@@ -8,6 +8,7 @@ import android.util.Log
 import android.view.Window
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -43,8 +44,13 @@ import androidx.core.content.getSystemService
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.ui.PlayerView
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
@@ -147,6 +153,7 @@ class PlayerState(internal val player: ExoPlayer) {
         })
     }
 
+    @OptIn(UnstableApi::class)
     fun prepare(url: String) {
         player.setMediaItem(MediaItem.fromUri(url))
         player.prepare()
@@ -165,25 +172,43 @@ class PlayerState(internal val player: ExoPlayer) {
     }
 
     fun seekTo(percentage: Float) {
+        val regularPercentage: Float = percentage.coerceIn(0f, 1f)
         val duration = player.duration
         if (duration != C.TIME_UNSET && player.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)) {
-            player.seekTo((percentage * duration).toLong())
+            player.seekTo((regularPercentage * duration).toLong())
         }
     }
 
-    fun getContentPercentage(): Float {
-        if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
-            return 0f
+    @Composable
+    fun produceDurationState(): State<Long> {
+        return produceState(initialValue = 0, key1 = playbackState) {
+            var duration: Long = player.duration
+            while (duration == C.TIME_UNSET) {
+                duration = player.duration
+                delay(1_000)
+            }
+            value = duration
         }
-        val duration: Long = player.duration
-        if (duration == C.TIME_UNSET) {
-            return 0f
-        }
-        return player.currentPosition * 1f / duration
     }
 
-    fun getBufferedPercentage(): Float {
-        return player.bufferedPercentage / 100f
+    @Composable
+    fun produceCurrentPositionState(): State<Long> {
+        return produceState(initialValue = 0, key1 = isPlaying) {
+            while (true) {
+                value = player.currentPosition
+                delay(1_000)
+            }
+        }
+    }
+
+    @Composable
+    fun produceBufferedPercentageState(): State<Float> {
+        return produceState(initialValue = 0f, key1 = isPlaying) {
+            while (true) {
+                value = player.bufferedPercentage / 100f
+                delay(1_000)
+            }
+        }
     }
 
 }

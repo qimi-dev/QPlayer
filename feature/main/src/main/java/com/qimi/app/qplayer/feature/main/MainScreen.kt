@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
@@ -61,15 +63,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.Coil
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import coil.util.CoilUtils
 import com.qimi.app.qplayer.core.model.data.Movie
 import kotlinx.coroutines.Dispatchers
 
 @Composable
 internal fun MainRoute(
     onSearchMovie: () -> Unit,
+    onSettingsClick: () -> Unit,
     onPreviewMovie: (Movie) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MainViewModel = hiltViewModel()
@@ -79,6 +84,7 @@ internal fun MainRoute(
     MainScreen(
         mainUiState = mainUiState,
         onSearchMovie = onSearchMovie,
+        onSettingsClick = onSettingsClick,
         onPreviewMovie = onPreviewMovie,
         onRefreshMovies = viewModel::fetchAllKindOfMovies,
         modifier = modifier
@@ -90,6 +96,7 @@ internal fun MainRoute(
 internal fun MainScreen(
     mainUiState: MainUiState,
     onSearchMovie: () -> Unit,
+    onSettingsClick: () -> Unit,
     onPreviewMovie: (Movie) -> Unit,
     onRefreshMovies: (() -> Unit) -> Unit,
     modifier: Modifier = Modifier
@@ -100,7 +107,7 @@ internal fun MainScreen(
                 title = {
                     SearchBarField(
                         onClick = onSearchMovie,
-                        modifier = Modifier.wrapContentWidth()
+                        modifier = Modifier.fillMaxWidth()
                     )
                 },
                 navigationIcon = {
@@ -116,7 +123,12 @@ internal fun MainScreen(
                     }
                 },
                 actions = {
-
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_settings_24),
+                            contentDescription = null
+                        )
+                    }
                 }
             )
         },

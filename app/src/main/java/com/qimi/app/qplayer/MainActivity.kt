@@ -46,14 +46,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             QPlayerTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    QPlayerApp(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                            .consumeWindowInsets(innerPadding)
-                    )
-                }
+                QPlayerApp(
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }

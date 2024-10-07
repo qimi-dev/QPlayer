@@ -14,11 +14,13 @@ fun NavController.navigateToMain() = navigate(MainRoute)
 
 fun NavGraphBuilder.mainScreen(
     onSearchMovie: () -> Unit,
+    onSettingsClick: () -> Unit,
     onPreviewMovie: (Movie) -> Unit
 ) {
     composable<MainRoute> {
         MainRoute(
             onSearchMovie = onSearchMovie,
+            onSettingsClick = onSettingsClick,
             onPreviewMovie = onPreviewMovie
         )
     }

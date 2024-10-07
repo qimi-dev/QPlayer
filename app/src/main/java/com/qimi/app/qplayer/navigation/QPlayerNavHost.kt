@@ -1,5 +1,9 @@
 package com.qimi.app.qplayer.navigation
 
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
@@ -17,6 +21,10 @@ import com.qimi.app.qplayer.feature.preview.navigation.previewScreen
 import com.qimi.app.qplayer.feature.search.navigation.SearchRoute
 import com.qimi.app.qplayer.feature.search.navigation.navigateToSearch
 import com.qimi.app.qplayer.feature.search.navigation.searchScreen
+import com.qimi.app.qplayer.feature.settings.SettingsDestination
+import com.qimi.app.qplayer.feature.settings.navigation.SettingsRoute
+import com.qimi.app.qplayer.feature.settings.navigation.navigateToSettings
+import com.qimi.app.qplayer.feature.settings.navigation.settingsScreen
 
 @Composable
 fun QPlayerNavHost(
@@ -30,7 +38,11 @@ fun QPlayerNavHost(
     ) {
         mainScreen(
             onSearchMovie = navController::navigateToSearch,
+            onSettingsClick = navController::navigateToSettings,
             onPreviewMovie = navController::navigateToPreview
+        )
+        settingsScreen(
+            onBackClick = navController::navigateUp
         )
         previewScreen(
             onBackClick = navController::navigateUp,

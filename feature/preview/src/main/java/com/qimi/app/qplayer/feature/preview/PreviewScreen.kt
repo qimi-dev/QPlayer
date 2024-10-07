@@ -66,6 +66,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -144,41 +145,45 @@ internal fun PreviewScreen(
 
     val activity: ComponentActivity = LocalContext.current as ComponentActivity
     val window: Window = activity.window
-    DisposableEffect(Unit) {
-        val contentResolver: ContentResolver = activity.contentResolver
-        val brightness: Float = Settings.System
-            .getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS) / 255f
-        val attributes = window.attributes
-        attributes.screenBrightness = brightness
-        window.attributes = attributes
+    val currentBrightness: Float = playerUiState.brightnessState.brightness
+    DisposableEffect(currentBrightness) {
+        if (currentBrightness == WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE) {
+            val contentResolver: ContentResolver = activity.contentResolver
+            val currentRealBrightness: Float = Settings.System
+                .getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS) / 255f
+            playerUiState.setBrightness(currentRealBrightness)
+        } else {
+            val attributes = window.attributes
+            attributes.screenBrightness = currentBrightness
+            window.attributes = attributes
+        }
         onDispose {
+            val attributes = window.attributes
             attributes.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
             window.attributes = attributes
         }
     }
-    Scaffold {
-        if (!isFullscreen) {
-            CompactPreviewScreen(
-                playerUiState = playerUiState,
-                contentUiState = contentUiState,
-                playerState = playerState,
-                selectedUrlIndex = selectedUrlIndex,
-                onPlay = { selectedUrlIndex = it },
-                onStop = onStop,
-                onBackClick = onBackClick,
-                onBackHomeClick = onBackHomeClick,
-                onEnterFullScreen = { isFullscreen = true },
-                modifier = modifier.padding(it)
-            )
-        } else {
-            ExpandedPreviewScreen(
-                playerUiState = playerUiState,
-                contentUiState = contentUiState,
-                playerState = playerState,
-                onExitFullScreen = { isFullscreen = false },
-                modifier = modifier.padding(it)
-            )
-        }
+    if (!isFullscreen) {
+        CompactPreviewScreen(
+            playerUiState = playerUiState,
+            contentUiState = contentUiState,
+            playerState = playerState,
+            selectedUrlIndex = selectedUrlIndex,
+            onPlay = { selectedUrlIndex = it },
+            onStop = onStop,
+            onBackClick = onBackClick,
+            onBackHomeClick = onBackHomeClick,
+            onEnterFullScreen = { isFullscreen = true },
+            modifier = modifier
+        )
+    } else {
+        ExpandedPreviewScreen(
+            playerUiState = playerUiState,
+            contentUiState = contentUiState,
+            playerState = playerState,
+            onExitFullScreen = { isFullscreen = false },
+            modifier = modifier
+        )
     }
 }
 
@@ -274,40 +279,48 @@ internal fun CompactPreviewScreen(
         }
     }
     BackHandler(onBack = onBack)
-    Column(modifier = modifier) {
-        Box(
+    Scaffold(
+        modifier = modifier
+    ) { innerPadding ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-                .background(Color.Black)
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
-            CompactPlayer(
-                playerUiState = playerUiState,
-                playerState = playerState,
-                onBack = onBack,
-                onBackHome = onBackHome,
-                onEnterFullScreen = onEnterFullScreen,
-                modifier = Modifier.fillMaxSize(),
-                visible = !isReadyToRelease
-            )
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                MovieDescription(
-                    name = contentUiState.name,
-                    score = contentUiState.score,
-                    description = contentUiState.description
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .background(Color.Black)
+            ) {
+                CompactPlayer(
+                    playerUiState = playerUiState,
+                    playerState = playerState,
+                    onBack = onBack,
+                    onBackHome = onBackHome,
+                    onEnterFullScreen = onEnterFullScreen,
+                    modifier = Modifier.fillMaxSize(),
+                    visible = !isReadyToRelease
                 )
             }
-            item {
-                MovieSelection(
-                    urls = contentUiState.urls,
-                    selectedIndex = selectedUrlIndex,
-                    onSelectIndex = onPlay
-                )
+            Spacer(modifier = Modifier.height(16.dp))
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    MovieDescription(
+                        name = contentUiState.name,
+                        score = contentUiState.score,
+                        description = contentUiState.description
+                    )
+                }
+                item {
+                    MovieSelection(
+                        urls = contentUiState.urls,
+                        selectedIndex = selectedUrlIndex,
+                        onSelectIndex = onPlay
+                    )
+                }
             }
         }
     }
@@ -325,6 +338,15 @@ internal fun CompactPlayer(
 ) {
     val shouldShowController: Boolean = playerUiState.controllerState
     val volumeState: VolumeState = playerUiState.volumeState
+    val brightnessState: BrightnessState = playerUiState.brightnessState
+    val currentPosition: Long by playerState.produceCurrentPositionState()
+    val duration: Long by playerState.produceDurationState()
+    val contentPercentage: Float by remember {
+        derivedStateOf {
+            if (duration == 0L) 0f else currentPosition * 1f / duration
+        }
+    }
+    val bufferedPercentage: Float by playerState.produceBufferedPercentageState()
     Player(
         state = playerState,
         modifier = modifier.alpha(if (visible) 1f else 0f)
@@ -340,6 +362,9 @@ internal fun CompactPlayer(
             },
             onAdjustVolume = playerUiState.adjustVolume,
             onAdjustBrightness = playerUiState.adjustBrightness,
+            onAdjustProgress = {
+                playerState.seekTo((contentPercentage + it).coerceIn(0f, 1f))
+            },
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 if (shouldShowController) {
@@ -357,10 +382,10 @@ internal fun CompactPlayer(
                     volumeState = volumeState,
                     modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.5f)
                 )
-//                BrightnessIndicator(
-//                    brightnessState = brightnessState,
-//                    modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.5f)
-//                )
+                BrightnessIndicator(
+                    brightnessState = brightnessState,
+                    modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.5f)
+                )
             },
             bottomBar = {
                 if (shouldShowController) {
@@ -381,12 +406,12 @@ internal fun CompactPlayer(
                             )
                         }
                         PlayProgressBar(
+                            contentPercentage = contentPercentage,
+                            bufferedPercentage = bufferedPercentage,
                             onSeekTo = {
                                 playerUiState.setControllerVisibility(true)
                                 playerState.seekTo(it)
                             },
-                            onReceiveContentPercentage = playerState::getContentPercentage,
-                            onReceiveBufferedPercentage = playerState::getBufferedPercentage,
                             modifier = Modifier.weight(1f)
                         )
                         FullscreenButton(
@@ -415,6 +440,15 @@ internal fun ExpandedPlayer(
 ) {
     val shouldShowController: Boolean = playerUiState.controllerState
     val volumeState: VolumeState = playerUiState.volumeState
+    val brightnessState: BrightnessState = playerUiState.brightnessState
+    val currentPosition: Long by playerState.produceCurrentPositionState()
+    val duration: Long by playerState.produceDurationState()
+    val contentPercentage: Float by remember {
+        derivedStateOf {
+            if (duration == 0L) 0f else currentPosition * 1f / duration
+        }
+    }
+    val bufferedPercentage: Float by playerState.produceBufferedPercentageState()
     Player(
         state = playerState,
         modifier = modifier
@@ -430,6 +464,9 @@ internal fun ExpandedPlayer(
             },
             onAdjustVolume = playerUiState.adjustVolume,
             onAdjustBrightness = playerUiState.adjustBrightness,
+            onAdjustProgress = {
+                playerState.seekTo((contentPercentage + it).coerceIn(0f, 1f))
+            },
             modifier = modifier,
             topBar = {
                 if (shouldShowController) {
@@ -452,10 +489,10 @@ internal fun ExpandedPlayer(
                     volumeState = volumeState,
                     modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.5f)
                 )
-//                BrightnessIndicator(
-//                    brightnessState = brightnessState,
-//                    modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.5f)
-//                )
+                BrightnessIndicator(
+                    brightnessState = brightnessState,
+                    modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.5f)
+                )
             },
             bottomBar = {
                 if (shouldShowController) {
@@ -466,12 +503,12 @@ internal fun ExpandedPlayer(
                             .padding(bottom = 8.dp)
                     ) {
                         PlayProgressBar(
+                            contentPercentage = contentPercentage,
+                            bufferedPercentage = bufferedPercentage,
                             onSeekTo = {
                                 playerUiState.setControllerVisibility(true)
                                 playerState.seekTo(it)
                             },
-                            onReceiveContentPercentage = playerState::getContentPercentage,
-                            onReceiveBufferedPercentage = playerState::getBufferedPercentage,
                             modifier = Modifier.fillMaxWidth().wrapContentHeight()
                         )
                         Row(

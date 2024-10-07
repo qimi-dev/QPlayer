@@ -8,6 +8,8 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.toRoute
 import com.qimi.app.qplayer.core.model.data.Movie
@@ -30,6 +32,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@UnstableApi
 @HiltViewModel
 class PreviewViewModel @Inject constructor(
     @ApplicationContext context: Context,
@@ -83,6 +86,7 @@ class PreviewViewModel @Inject constructor(
                 volumeState = volumeState,
                 adjustVolume = ::adjustVolume,
                 brightnessState = brightnessState,
+                setBrightness = ::setBrightness,
                 adjustBrightness = ::adjustBrightness
             )
         }.stateIn(
@@ -95,6 +99,7 @@ class PreviewViewModel @Inject constructor(
                 volumeState = volumeState.value,
                 adjustVolume = ::adjustVolume,
                 brightnessState = brightnessState.value,
+                setBrightness = ::setBrightness,
                 adjustBrightness = ::adjustBrightness
             )
         )
@@ -126,11 +131,18 @@ class PreviewViewModel @Inject constructor(
         }
     }
 
+    private fun setBrightness(percent: Float) {
+        brightnessState.update { it.copy(brightness = percent) }
+    }
+
     private fun adjustBrightness(offsetPercent: Float) {
         val lastHandler: Job? = brightnessStateHandler
         brightnessStateHandler = viewModelScope.launch {
             lastHandler?.cancelAndJoin()
-
+            val newBrightness: Float = (brightnessState.value.brightness - offsetPercent).coerceIn(0f,1f)
+            brightnessState.value = BrightnessState(true, newBrightness)
+            delay(500)
+            brightnessState.value = BrightnessState(false, newBrightness)
         }
     }
 
@@ -151,6 +163,7 @@ data class PlayerUiState(
     val volumeState: VolumeState,
     val adjustVolume: (Float) -> Unit,
     val brightnessState: BrightnessState,
+    val setBrightness: (Float) -> Unit,
     val adjustBrightness: (Float) -> Unit
 )
 
