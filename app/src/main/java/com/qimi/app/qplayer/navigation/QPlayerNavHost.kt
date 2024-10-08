@@ -33,7 +33,7 @@ fun QPlayerNavHost(
     val navController = rememberNavController()
     NavHost(
         navController = navController,
-        startDestination = MainRoute,
+        startDestination = SettingsRoute,
         modifier = modifier
     ) {
         mainScreen(

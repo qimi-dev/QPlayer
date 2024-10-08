@@ -8,5 +8,8 @@ android {
 }
 
 dependencies {
+    implementation(projects.core.data)
+
     implementation(libs.androidx.material3)
 }
+

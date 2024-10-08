@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -30,10 +31,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,14 +47,17 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.setValue
 
 enum class SettingsDestination(
     val titleId: Int
 ) {
-    MAIN_SETTING(
+    MAIN_SETTINGS(
         titleId = R.string.setting
     ),
-    PLAYING_SETTING(
+    PLAYING_SETTINGS(
         titleId = R.string.playing_setting
     )
 }
@@ -70,8 +77,10 @@ internal fun SettingsRoute(
         }
     }
     BackHandler(onBack = onBackHandler)
+    val playingSettingsUiState: PlayingSettingsUiState? by viewModel.playingSettingsUiState.collectAsState()
     SettingsScreen(
         topDestination = topDestination,
+        playingSettingsUiState = playingSettingsUiState,
         navigateTo = viewModel::navigateTo,
         onBackClick = onBackHandler,
         modifier = modifier
@@ -82,6 +91,7 @@ internal fun SettingsRoute(
 @Composable
 internal fun SettingsScreen(
     topDestination: SettingsDestination,
+    playingSettingsUiState: PlayingSettingsUiState?,
     navigateTo: (SettingsDestination) -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -123,15 +133,17 @@ internal fun SettingsScreen(
             }
         ) {
             when (it) {
-                SettingsDestination.MAIN_SETTING -> MainSetting(navigateTo=  navigateTo)
-                SettingsDestination.PLAYING_SETTING -> {}
+                SettingsDestination.MAIN_SETTINGS -> MainSettings(navigateTo=  navigateTo)
+                SettingsDestination.PLAYING_SETTINGS -> PlayingSettings(
+                    playingSettingsUiState = playingSettingsUiState
+                )
             }
         }
     }
 }
 
 @Composable
-internal fun MainSetting(
+internal fun MainSettings(
     navigateTo: (SettingsDestination) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -146,7 +158,7 @@ internal fun MainSetting(
                 SettingItem(
                     title = stringResource(R.string.playing_setting),
                     icon = painterResource(R.drawable.ic_video_settings_24),
-                    onClick = { navigateTo(SettingsDestination.PLAYING_SETTING) }
+                    onClick = { navigateTo(SettingsDestination.PLAYING_SETTINGS) }
                 )
                 // 管理存储空间
                 SettingItem(
@@ -169,11 +181,39 @@ internal fun MainSetting(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun PlayingSetting(
+internal fun PlayingSettings(
+    playingSettingsUiState: PlayingSettingsUiState?,
     modifier: Modifier = Modifier
 ) {
-
+    var value: Float by remember { mutableFloatStateOf(0f) }
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        item {
+            SettingGroup {
+                Text(
+                    text = "播放缓冲时长",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Slider(
+                    value = value,
+                    onValueChange = { value = it },
+                    thumb = {},
+                    track = { sliderState ->
+                        SliderDefaults.Track(
+                            sliderState = sliderState,
+                            thumbTrackGapSize = 0.dp,
+                            trackInsideCornerSize = 0.dp
+                        )
+                    }
+                )
+            }
+        }
+    }
 }
 
 @Composable

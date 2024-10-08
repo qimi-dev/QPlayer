@@ -12,6 +12,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.toRoute
+import com.qimi.app.qplayer.core.data.repository.UserDataRepository
 import com.qimi.app.qplayer.core.model.data.Movie
 import com.qimi.app.qplayer.core.ui.PlayerState
 import com.qimi.app.qplayer.feature.preview.navigation.PreviewRoute
@@ -27,16 +28,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-@UnstableApi
 @HiltViewModel
 class PreviewViewModel @Inject constructor(
     @ApplicationContext context: Context,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
+    userDataRepository: UserDataRepository
 ) : ViewModel() {
 
     private val previewRoute: PreviewRoute = savedStateHandle.toRoute()
@@ -60,16 +63,14 @@ class PreviewViewModel @Inject constructor(
             first to second
         }
 
-    val exoPlayer: ExoPlayer = ExoPlayer.Builder(context).build()
+    private lateinit var exoPlayer: ExoPlayer
 
-    private var controllerStateHandler: Job? = null
-
-    private val controllerState: MutableStateFlow<Boolean> = MutableStateFlow(true)
+    private val playerState: MutableStateFlow<PlayerState?> = MutableStateFlow(null)
 
     private var volumeStateHandler: Job? = null
 
     private val volumeState: MutableStateFlow<VolumeState> =
-        MutableStateFlow(VolumeState(false, exoPlayer.volume))
+        MutableStateFlow(VolumeState(false, 1f))
 
     private var brightnessStateHandler: Job? = null
 
@@ -77,12 +78,11 @@ class PreviewViewModel @Inject constructor(
         MutableStateFlow(BrightnessState(false, WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE))
 
     val playerUiState: StateFlow<PlayerUiState> =
-        combine(controllerState, volumeState, brightnessState) {
-            controllerState, volumeState, brightnessState ->
+        combine(playerState, volumeState, brightnessState) {
+            playerState, volumeState, brightnessState ->
             PlayerUiState(
                 title = movie.name,
-                controllerState = controllerState,
-                setControllerVisibility = ::setControllerVisibility,
+                playerState = playerState,
                 volumeState = volumeState,
                 adjustVolume = ::adjustVolume,
                 brightnessState = brightnessState,
@@ -94,8 +94,7 @@ class PreviewViewModel @Inject constructor(
             started = SharingStarted.Lazily,
             initialValue = PlayerUiState(
                 title = movie.name,
-                controllerState = controllerState.value,
-                setControllerVisibility = ::setControllerVisibility,
+                playerState = null,
                 volumeState = volumeState.value,
                 adjustVolume = ::adjustVolume,
                 brightnessState = brightnessState.value,
@@ -107,15 +106,11 @@ class PreviewViewModel @Inject constructor(
     val contentUiState: StateFlow<ContentUiState> =
         MutableStateFlow(ContentUiState(movie.name, movie.score, movie.content, movieUrls))
 
-    private fun setControllerVisibility(visibility: Boolean) {
-        val lastHandler: Job? = controllerStateHandler
-        controllerStateHandler = viewModelScope.launch {
-            lastHandler?.cancelAndJoin()
-            if (visibility) {
-                controllerState.value = true
-                delay(5_000)
-            }
-            controllerState.value = false
+    init {
+        // 加载播放器并设置播放参数
+        viewModelScope.launch {
+            exoPlayer = ExoPlayer.Builder(context).build()
+            playerState.value = PlayerState(exoPlayer)
         }
     }
 
@@ -146,10 +141,6 @@ class PreviewViewModel @Inject constructor(
         }
     }
 
-    fun stop() {
-        exoPlayer.stop()
-    }
-
     override fun onCleared() {
         exoPlayer.release()
     }
@@ -158,8 +149,7 @@ class PreviewViewModel @Inject constructor(
 
 data class PlayerUiState(
     val title: String,
-    val controllerState: Boolean,
-    val setControllerVisibility: (Boolean) -> Unit,
+    val playerState: PlayerState?,
     val volumeState: VolumeState,
     val adjustVolume: (Float) -> Unit,
     val brightnessState: BrightnessState,

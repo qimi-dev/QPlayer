@@ -1,33 +1,22 @@
 package com.qimi.app.qplayer.core.ui
 
-import android.content.ContentResolver
 import android.content.Context
-import android.media.AudioManager
-import android.provider.Settings
+import android.media.session.PlaybackState
 import android.util.Log
-import android.view.Window
-import android.view.WindowManager
-import androidx.activity.ComponentActivity
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.draggable2D
-import androidx.compose.foundation.gestures.rememberDraggable2DState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -36,21 +25,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.getSystemService
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
-import androidx.media3.datasource.DataSource
-import androidx.media3.datasource.DefaultHttpDataSource
-import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.ui.PlayerView
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
@@ -58,8 +41,6 @@ import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import kotlinx.coroutines.delay
-import java.util.Date
-import kotlin.math.absoluteValue
 
 @Composable
 fun Player(
@@ -68,7 +49,7 @@ fun Player(
     playerController: @Composable BoxScope.(PlayerState) -> Unit = {}
 ) {
     val context: Context = LocalContext.current
-    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.loading))
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.movie_loading))
     val progress by animateLottieCompositionAsState(composition, iterations = LottieConstants.IterateForever)
     Box(modifier = modifier) {
         AndroidView(
@@ -171,41 +152,47 @@ class PlayerState(internal val player: ExoPlayer) {
         }
     }
 
-    fun seekTo(percentage: Float) {
-        val regularPercentage: Float = percentage.coerceIn(0f, 1f)
-        val duration = player.duration
-        if (duration != C.TIME_UNSET && player.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)) {
-            player.seekTo((regularPercentage * duration).toLong())
+    fun stop() = player.stop()
+
+    fun seekTo(positionMs: Long) {
+        if (player.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)) {
+            player.seekTo(positionMs)
         }
     }
 
     @Composable
-    fun produceDurationState(): State<Long> {
+    fun produceContentPositionState(): State<Long> {
         return produceState(initialValue = 0, key1 = playbackState) {
-            var duration: Long = player.duration
-            while (duration == C.TIME_UNSET) {
-                duration = player.duration
-                delay(1_000)
+            if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
+                // 如果未加载或者已经播放完成，则退出
+                return@produceState
             }
-            value = duration
-        }
-    }
-
-    @Composable
-    fun produceCurrentPositionState(): State<Long> {
-        return produceState(initialValue = 0, key1 = isPlaying) {
             while (true) {
-                value = player.currentPosition
+                value = player.contentPosition
                 delay(1_000)
             }
         }
     }
 
     @Composable
-    fun produceBufferedPercentageState(): State<Float> {
-        return produceState(initialValue = 0f, key1 = isPlaying) {
+    fun produceContentDurationState(): State<Long> {
+        return produceState(initialValue = 0, key1 = playbackState) {
+            val contentDuration: Long = player.contentDuration
+            if (contentDuration != C.TIME_UNSET) {
+                value = player.contentDuration
+            }
+        }
+    }
+
+    @Composable
+    fun produceContentBufferedPositionState(): State<Long> {
+        return produceState(initialValue = 0, key1 = playbackState) {
+            if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
+                // 如果未加载或者已经播放完成，则退出
+                return@produceState
+            }
             while (true) {
-                value = player.bufferedPercentage / 100f
+                value = player.contentBufferedPosition
                 delay(1_000)
             }
         }

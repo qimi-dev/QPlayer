@@ -4,10 +4,10 @@ plugins {
 }
 
 android {
-    namespace = "com.qimi.app.qplayer.core.data"
+    namespace = "com.qimi.app.qplayer.core.datastore"
 }
 
 dependencies {
-    api(projects.core.network)
-    api(projects.core.datastore)
+    api(libs.androidx.dataStore)
+    api(projects.core.model)
 }
