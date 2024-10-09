@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 interface UserDataRepository {
 
     val playingSettings: Flow<PlayingSettings>
-
-    suspend fun setPlayingProgress(progress: Float)
+    
+    suspend fun setBufferDurations(bufferDurations: Long)
 
 }

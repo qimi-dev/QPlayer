@@ -14,6 +14,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.toRoute
 import com.qimi.app.qplayer.core.data.repository.UserDataRepository
 import com.qimi.app.qplayer.core.model.data.Movie
+import com.qimi.app.qplayer.core.model.data.PlayingSettings
 import com.qimi.app.qplayer.core.ui.PlayerState
 import com.qimi.app.qplayer.feature.preview.navigation.PreviewRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -108,8 +109,16 @@ class PreviewViewModel @Inject constructor(
 
     init {
         // 加载播放器并设置播放参数
-        viewModelScope.launch {
-            exoPlayer = ExoPlayer.Builder(context).build()
+        viewModelScope.launch @UnstableApi {
+            val playingSettings: PlayingSettings = userDataRepository.playingSettings.first()
+            val bufferDurations: Int = playingSettings.bufferDurations.toInt() * 1000
+            Log.d("Qimi", "加载缓存时间：${bufferDurations}")
+            exoPlayer = ExoPlayer.Builder(context)
+                .setLoadControl(
+                    DefaultLoadControl.Builder()
+                        .setBufferDurationsMs(bufferDurations, bufferDurations, 2500, 5000)
+                        .build()
+                ).build()
             playerState.value = PlayerState(exoPlayer)
         }
     }

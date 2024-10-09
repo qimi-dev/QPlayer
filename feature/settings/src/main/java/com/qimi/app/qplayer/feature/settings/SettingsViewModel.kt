@@ -8,10 +8,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.qimi.app.qplayer.core.data.repository.UserDataRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -26,12 +28,18 @@ class SettingsViewModel @Inject constructor(
 
     val playingSettingsUiState: StateFlow<PlayingSettingsUiState> =
         userDataRepository.playingSettings.map {
-            PlayingSettingsUiState.Success(it.progress, {})
+            PlayingSettingsUiState.Success(it.bufferDurations, ::setBufferDurations)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
             initialValue = PlayingSettingsUiState.Loading
         )
+
+    private fun setBufferDurations(bufferDurations: Long) {
+        viewModelScope.launch {
+            userDataRepository.setBufferDurations(bufferDurations)
+        }
+    }
 
     fun navigateTo(destination: SettingsDestination) {
         destinations.add(destination)
@@ -49,7 +57,10 @@ class SettingsViewModel @Inject constructor(
 
 sealed interface PlayingSettingsUiState {
     data object Loading : PlayingSettingsUiState
-    data class Success(val progress: Float, val setProgress: (Float) -> Unit) : PlayingSettingsUiState
+    data class Success(
+        val bufferDurations: Long,
+        val setBufferDurations: (Long) -> Unit
+    ) : PlayingSettingsUiState
 }
 
 

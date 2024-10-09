@@ -12,7 +12,7 @@ internal class OfflineUserDataRepository @Inject constructor(
     override val playingSettings: Flow<PlayingSettings> =
         userPreferencesDataSource.playingSettings
 
-    override suspend fun setPlayingProgress(progress: Float) =
-        userPreferencesDataSource.setPlayingProgress(progress)
+    override suspend fun setBufferDurations(bufferDurations: Long) =
+        userPreferencesDataSource.setBufferDurations(bufferDurations)
 
 }

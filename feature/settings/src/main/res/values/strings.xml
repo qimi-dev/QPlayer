@@ -3,4 +3,5 @@
     <string name="playing_setting">播放设置</string>
     <string name="manage_store_space">管理存储空间</string>
     <string name="about_software">关于软件</string>
+    <string name="buffer_durations">缓冲时长</string>
 </resources>
