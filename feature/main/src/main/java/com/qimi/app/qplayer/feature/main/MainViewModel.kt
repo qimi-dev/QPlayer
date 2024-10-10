@@ -8,7 +8,6 @@ import com.qimi.app.qplayer.core.model.data.MovieList
 import com.qimi.app.qplayer.core.ui.retry
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

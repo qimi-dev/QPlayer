@@ -112,7 +112,6 @@ class PreviewViewModel @Inject constructor(
         viewModelScope.launch @UnstableApi {
             val playingSettings: PlayingSettings = userDataRepository.playingSettings.first()
             val bufferDurations: Int = playingSettings.bufferDurations.toInt() * 1000
-            Log.d("Qimi", "加载缓存时间：${bufferDurations}")
             exoPlayer = ExoPlayer.Builder(context)
                 .setLoadControl(
                     DefaultLoadControl.Builder()

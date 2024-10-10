@@ -1,38 +1,25 @@
 package com.qimi.app.qplayer
 
-import android.app.UiModeManager
-import android.content.Context
 import android.graphics.Color
-import android.media.AudioManager
 import android.os.Bundle
 import android.util.Log
-import android.view.View
-import android.view.Window
-import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import com.qimi.app.qplayer.navigation.QPlayerNavHost
 import com.qimi.app.qplayer.ui.theme.QPlayerTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -42,10 +29,19 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
 
         setContent {
             QPlayerTheme {
+                val background = MaterialTheme.colorScheme.background
+                var shouldEnableEdgeToEdge: Boolean by rememberSaveable(background) { mutableStateOf(true) }
+                if (shouldEnableEdgeToEdge) {
+                    LaunchedEffect(Unit) {
+                        shouldEnableEdgeToEdge = false
+                        enableEdgeToEdge(
+                            navigationBarStyle = SystemBarStyle.light(background.toArgb(), background.toArgb())
+                        )
+                    }
+                }
                 QPlayerApp(
                     modifier = Modifier.fillMaxSize()
                 )

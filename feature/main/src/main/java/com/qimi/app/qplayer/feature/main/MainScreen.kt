@@ -1,6 +1,10 @@
 package com.qimi.app.qplayer.feature.main
 
 import android.content.Context
+import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.LocalOverscrollConfiguration
@@ -47,6 +51,7 @@ import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +61,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -113,24 +120,13 @@ internal fun MainScreen(
                     )
                 },
                 navigationIcon = {
-                    OutlinedCard(
-                        onClick = {},
-                        modifier = Modifier.size(48.dp).padding(8.dp),
-                        shape = CircleShape
-                    ) {
-                        Image(
-                            painter = painterResource(R.drawable.ic_head),
-                            contentDescription = null
-                        )
-                    }
+                    Icon(
+                        painter = painterResource(R.drawable.ic_launcher_foreground),
+                        contentDescription = null
+                    )
                 },
                 actions = {
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_settings_24),
-                            contentDescription = null
-                        )
-                    }
+                    Spacer(modifier = Modifier.width(24.dp))
                 }
             )
         },

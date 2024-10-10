@@ -1,11 +1,19 @@
 package com.qimi.app.qplayer.navigation
 
+import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -31,9 +39,10 @@ fun QPlayerNavHost(
     modifier: Modifier = Modifier
 ) {
     val navController = rememberNavController()
+
     NavHost(
         navController = navController,
-        startDestination = SettingsRoute,
+        startDestination = MainRoute,
         modifier = modifier
     ) {
         mainScreen(

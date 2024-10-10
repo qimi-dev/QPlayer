@@ -3,6 +3,7 @@ package com.qimi.app.qplayer.feature.preview
 import android.content.ContentResolver
 import android.content.pm.ActivityInfo
 import android.provider.Settings
+import android.util.Log
 import android.view.Window
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -33,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -43,12 +45,17 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,6 +64,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -75,10 +83,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
@@ -173,10 +183,14 @@ internal fun PreviewScreen(
     val windowInsetsController = remember(window) {
         WindowInsetsControllerCompat(window, window.decorView)
     }
+    val background: Color = MaterialTheme.colorScheme.background
     when (previewMode) {
         PreviewMode.COMMON -> DisposableEffect(Unit) {
             // 普通模式，修改状态栏颜色
-            activity.enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(android.graphics.Color.BLACK))
+            activity.enableEdgeToEdge(
+                statusBarStyle = SystemBarStyle.dark(android.graphics.Color.BLACK),
+                navigationBarStyle = SystemBarStyle.light(background.toArgb(), background.toArgb())
+            )
             onDispose {
                 // 复原普通模式的修改
                 // TODO 由于复原存在延迟，迁移至返回业务逻辑中执行
@@ -222,11 +236,15 @@ internal fun PreviewScreen(
                     adjustBrightness = playerUiState.adjustBrightness,
                     adjustVolume = playerUiState.adjustVolume,
                     onBackClick = {
-                        activity.enableEdgeToEdge()
+                        activity.enableEdgeToEdge(
+                            navigationBarStyle = SystemBarStyle.light(background.toArgb(), background.toArgb())
+                        )
                         onBackClick()
                     },
                     onBackHomeClick = {
-                        activity.enableEdgeToEdge()
+                        activity.enableEdgeToEdge(
+                            navigationBarStyle = SystemBarStyle.light(background.toArgb(), background.toArgb())
+                        )
                         onBackHomeClick()
                     },
                     onEnterFullScreen = { previewMode = PreviewMode.LANDSCAPE },
@@ -715,16 +733,23 @@ internal fun PreviewSelection(
             }
         ) { isExpanded ->
             if (isExpanded) {
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier.heightIn(max = 240.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    urls.forEachIndexed { index, pair ->
+                    itemsIndexed(
+                        items = urls
+                    ) { index, item ->
                         FilterChip(
                             selected = selectedIndex == index,
                             onClick = { onSelectIndex(index) },
                             label = {
-                                Text(text = pair.first)
+                                Text(
+                                    text = item.first,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                )
                             }
                         )
                     }

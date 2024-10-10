@@ -14,6 +14,7 @@ androidxNavigation = "2.8.1"
 androidxHiltNavigationCompose = "1.2.0"
 ksp = "2.0.0-1.0.21"
 hilt = "2.51.1"
+hiltExt = "1.2.0"
 appcompat = "1.7.0"
 material3 = "1.3.0"
 retrofit = "2.11.0"
@@ -24,6 +25,9 @@ lottie = "6.5.2"
 activity = "1.9.2"
 material = "1.12.0"
 androidxDataStore = "1.1.1"
+androidxWork = "2.9.1"
+room = "2.6.1"
+
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -61,6 +65,14 @@ lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", versio
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-dataStore = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "androidxDataStore" }
+androidx-work = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "androidxWork" }
+hilt-ext-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltExt" }
+hilt-ext-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltExt" }
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+ksp-gradlePlugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
+room-gradlePlugin = { group = "androidx.room", name = "room-gradle-plugin", version.ref = "room" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -71,12 +83,14 @@ jetbrains-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serializati
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+room = { id = "androidx.room", version.ref = "room" }
 
 qplayer-android-application = { id = "qplayer.android.application", version = "unspecified" }
 qplayer-android-application-compose = { id = "qplayer.android.application.compose", version = "unspecified" }
 qplayer-android-library = { id = "qplayer.android.library", version = "unspecified" }
 qplayer-android-library-compose = { id = "qplayer.android.library.compose", version = "unspecified" }
 qplayer-hilt = { id = "qplayer.hilt", version = "unspecified" }
+qplayer-android-room = { id = "qplayer.android.room", version = "unspecified" }
 qplayer-android-feature = { id = "qplayer.android.feature", version = "unspecified" }
 qplayer-jvm-library = { id = "qplayer.jvm.library", version = "unspecified" }
 

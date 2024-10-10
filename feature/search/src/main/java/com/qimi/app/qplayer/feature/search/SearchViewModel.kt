@@ -1,6 +1,5 @@
 package com.qimi.app.qplayer.feature.search
 
-import android.util.Log
 import kotlin.math.pow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

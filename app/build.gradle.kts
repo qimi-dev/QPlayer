@@ -53,6 +53,8 @@ dependencies {
     implementation(projects.core.data)
     implementation(projects.core.ui)
 
+    implementation(projects.sync.work)
+
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.material3)

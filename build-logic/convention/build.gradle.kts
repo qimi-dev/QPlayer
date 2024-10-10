@@ -39,6 +39,8 @@ kotlin {
 dependencies {
     compileOnly(libs.android.gradlePlugin)
     compileOnly(libs.kotlin.gradlePlugin)
+    compileOnly(libs.ksp.gradlePlugin)
+    compileOnly(libs.room.gradlePlugin)
 }
 
 tasks {
@@ -62,6 +64,10 @@ gradlePlugin {
             id = "qplayer.hilt"
             implementationClass = "HiltConventionPlugin"
         }
+        register("androidRoom") {
+            id = "qplayer.android.room"
+            implementationClass = "AndroidRoomConventionPlugin"
+        }
         register("androidLibrary") {
             id = "qplayer.android.library"
             implementationClass = "AndroidLibraryConventionPlugin"
@@ -78,5 +84,6 @@ gradlePlugin {
             id = "qplayer.jvm.library"
             implementationClass = "JvmLibraryConventionPlugin"
         }
+
     }
 }
