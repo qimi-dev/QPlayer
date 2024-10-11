@@ -95,9 +95,11 @@ import androidx.core.text.HtmlCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.qimi.app.qplayer.core.ui.AppState
 import com.qimi.app.qplayer.core.ui.BackButton
 import com.qimi.app.qplayer.core.ui.FullscreenButton
 import com.qimi.app.qplayer.core.ui.HomeButton
+import com.qimi.app.qplayer.core.ui.LocalAppState
 import com.qimi.app.qplayer.core.ui.PlayButton
 import com.qimi.app.qplayer.core.ui.ProgressBar
 import com.qimi.app.qplayer.core.ui.Player
@@ -183,30 +185,22 @@ internal fun PreviewScreen(
     val windowInsetsController = remember(window) {
         WindowInsetsControllerCompat(window, window.decorView)
     }
-    val background: Color = MaterialTheme.colorScheme.background
-    when (previewMode) {
-        PreviewMode.COMMON -> DisposableEffect(Unit) {
-            // 普通模式，修改状态栏颜色
-            activity.enableEdgeToEdge(
-                statusBarStyle = SystemBarStyle.dark(android.graphics.Color.BLACK),
-                navigationBarStyle = SystemBarStyle.light(background.toArgb(), background.toArgb())
-            )
-            onDispose {
-                // 复原普通模式的修改
-                // TODO 由于复原存在延迟，迁移至返回业务逻辑中执行
-                // activity.enableEdgeToEdge()
+    val appState: AppState = LocalAppState.current
+    DisposableEffect(previewMode) {
+        when (previewMode) {
+            PreviewMode.COMMON -> {
+                appState.setSystemBarStyle(
+                    statusBarStyle = SystemBarStyle.dark(android.graphics.Color.BLACK)
+                )
+                onDispose {  }
             }
-        }
-        PreviewMode.LANDSCAPE -> DisposableEffect(Unit) {
-            // 横屏模式，修改屏幕方向、隐藏状态栏
-            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-            windowInsetsController.systemBarsBehavior =
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
-            onDispose {
-                // 复原横屏模式的修改
-                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-                windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+            PreviewMode.LANDSCAPE -> {
+                windowInsetsController.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+                onDispose {
+                    windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+                }
             }
         }
     }
@@ -236,19 +230,25 @@ internal fun PreviewScreen(
                     adjustBrightness = playerUiState.adjustBrightness,
                     adjustVolume = playerUiState.adjustVolume,
                     onBackClick = {
-                        activity.enableEdgeToEdge(
-                            navigationBarStyle = SystemBarStyle.light(background.toArgb(), background.toArgb())
+                        appState.setSystemBarStyle(
+                            statusBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
                         )
                         onBackClick()
                     },
                     onBackHomeClick = {
-                        activity.enableEdgeToEdge(
-                            navigationBarStyle = SystemBarStyle.light(background.toArgb(), background.toArgb())
+                        appState.setSystemBarStyle(
+                            statusBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
                         )
                         onBackHomeClick()
                     },
-                    onEnterFullScreen = { previewMode = PreviewMode.LANDSCAPE },
-                    onExitFullScreen = { previewMode = PreviewMode.COMMON },
+                    onEnterFullScreen = {
+                        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                        previewMode = PreviewMode.LANDSCAPE
+                    },
+                    onExitFullScreen = {
+                        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                        previewMode = PreviewMode.COMMON
+                    },
                     modifier = Modifier.fillMaxSize()
                 )
                 VolumeIndicator(
