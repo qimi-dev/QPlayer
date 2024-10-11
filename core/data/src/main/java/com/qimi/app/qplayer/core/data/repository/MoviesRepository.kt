@@ -13,6 +13,6 @@ interface MoviesRepository : Syncable {
         type: Int = 0
     ): Result<MovieList>
 
-    fun getCachedCommonMovies(): Flow<List<Movie>>
+    fun getCachedMovies(type: Int): Flow<List<Movie>>
 
 }

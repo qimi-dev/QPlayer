@@ -95,7 +95,7 @@ internal fun MainRoute(
         onSearchMovie = onSearchMovie,
         onSettingsClick = onSettingsClick,
         onPreviewMovie = onPreviewMovie,
-        onRefreshMovies = viewModel::fetchAllKindOfMovies,
+        onRefreshMovies = viewModel::refreshMovies,
         modifier = modifier
     )
 }

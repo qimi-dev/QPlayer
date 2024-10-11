@@ -21,8 +21,8 @@ internal class OfflineFirstMoviesRepository @Inject constructor(
         return networkSource.fetchMovieList(keyword, pageIndex, type).map { it.asExternalModel() }
     }
 
-    override fun getCachedCommonMovies(): Flow<List<Movie>> {
-        return cachedMovieDao.getCachedMovies(0)
+    override fun getCachedMovies(type: Int): Flow<List<Movie>> {
+        return cachedMovieDao.getCachedMovies(type)
             .map { it.map(CachedMovieEntity::asExternalModel) }
     }
 
