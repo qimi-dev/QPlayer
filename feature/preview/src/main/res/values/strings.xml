@@ -1,3 +1,4 @@
 <resources>
     <string name="select_movie">选集</string>
+    <string name="fast_forward_playing">倍速播放中</string>
 </resources>

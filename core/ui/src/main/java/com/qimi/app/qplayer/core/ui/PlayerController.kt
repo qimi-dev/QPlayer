@@ -6,6 +6,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.GestureCancellationException
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
@@ -64,6 +65,7 @@ fun PlayerController(
     bottomBar: @Composable () -> Unit = {},
     onClick: () -> Unit = {},
     onDoubleClick: () -> Unit = {},
+    onLongPressEvent: (Boolean) -> Unit = {},
     onLeftVerticalDrag: (Float) -> Unit = {},
     onRightVerticalDrag: (Float) -> Unit = {},
     onHorizontalDragStarted: () -> Unit,
@@ -78,6 +80,7 @@ fun PlayerController(
     var isEffectiveTouch: Boolean by remember { mutableStateOf(true) }
     var isHorizontalControl: Boolean by remember { mutableStateOf(false) }
     var isVerticalControl: Boolean by remember { mutableStateOf(false) }
+    var isLongPress: Boolean by remember { mutableStateOf(false) }
     CompositionLocalProvider(
         LocalContentColor provides MaterialTheme.colorScheme.surface
     ) {
@@ -87,8 +90,27 @@ fun PlayerController(
                 .onSizeChanged {
                     touchableWidth = it.width
                     touchableHeight = it.height
-                }
-                .draggable2D(
+                }.pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = { onClick() },
+                        onDoubleTap = { onDoubleClick() },
+                        onLongPress = {
+                            isLongPress = true
+                            onLongPressEvent(true)
+                        },
+                        onPress = {
+                            // 等待释放，判断是否有长按事件
+                            try {
+                                awaitRelease()
+                            } finally {
+                                if (isLongPress) {
+                                    isLongPress = false
+                                    onLongPressEvent(false)
+                                }
+                            }
+                        }
+                    )
+                }.draggable2D(
                     onDragStarted = {
                         dragX = it.x
                         dragY = it.y
@@ -150,12 +172,6 @@ fun PlayerController(
                             }
                         }
                     }
-                )
-                .combinedClickable(
-                    interactionSource = null,
-                    indication = null,
-                    onClick = onClick,
-                    onDoubleClick = onDoubleClick
                 )
         ) {
             if (shouldShowController) {

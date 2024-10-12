@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
@@ -157,6 +158,12 @@ class PlayerState(internal val player: ExoPlayer) {
     fun seekTo(positionMs: Long) {
         if (player.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)) {
             player.seekTo(positionMs)
+        }
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        if (player.isCommandAvailable(Player.COMMAND_SET_SPEED_AND_PITCH)) {
+            player.setPlaybackSpeed(speed)
         }
     }
 

@@ -2,6 +2,7 @@ package com.qimi.app.qplayer.feature.preview
 
 import android.content.ContentResolver
 import android.content.pm.ActivityInfo
+import android.icu.util.Calendar
 import android.provider.Settings
 import android.util.Log
 import android.view.Window
@@ -38,10 +39,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsStartWidth
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -52,6 +55,7 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -79,11 +83,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -95,6 +101,11 @@ import androidx.core.text.HtmlCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.qimi.app.qplayer.core.ui.AppState
 import com.qimi.app.qplayer.core.ui.BackButton
 import com.qimi.app.qplayer.core.ui.FullscreenButton
@@ -112,6 +123,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Duration
+import java.util.Date
 import java.util.Locale
 import kotlin.math.absoluteValue
 
@@ -206,6 +218,7 @@ internal fun PreviewScreen(
     }
     val volumeState: VolumeState = playerUiState.volumeState
     val brightnessState: BrightnessState = playerUiState.brightnessState
+    var isFastForward: Boolean by remember { mutableStateOf(false) }
     Scaffold(modifier = modifier) { innerPadding ->
         Column(
             modifier = Modifier.fillMaxSize().then(
@@ -227,6 +240,10 @@ internal fun PreviewScreen(
                     title = playerUiState.title,
                     previewMode = previewMode,
                     playerState = playerState,
+                    onLongPressEvent = { isPress ->
+                        isFastForward = isPress
+                        playerState.setPlaybackSpeed(if (isPress) 3f else 1f)
+                    },
                     adjustBrightness = playerUiState.adjustBrightness,
                     adjustVolume = playerUiState.adjustVolume,
                     onBackClick = {
@@ -265,6 +282,10 @@ internal fun PreviewScreen(
                         .widthIn(max = 240.dp)
                         .fillMaxWidth(0.8f)
                 )
+                FastForwardIndicator(
+                    isShow = isFastForward,
+                    modifier = Modifier.align(BiasAlignment(0f, -0.7f))
+                )
             }
             Spacer(modifier = Modifier.height(16.dp))
             LazyColumn(
@@ -294,6 +315,7 @@ internal fun PreviewPlayer(
     title: String,
     previewMode: PreviewMode,
     playerState: PlayerState,
+    onLongPressEvent: (Boolean) -> Unit,
     adjustBrightness: (Float) -> Unit,
     adjustVolume: (Float) -> Unit,
     onBackClick: () -> Unit,
@@ -397,6 +419,10 @@ internal fun PreviewPlayer(
                 // 双击屏幕开始、暂停视频
                 if (playerState.isPlaying) playerState.pause() else playerState.play()
             },
+            onLongPressEvent = {
+                // 长按快进播放
+                onLongPressEvent(it)
+            },
             onLeftVerticalDrag = {
                 // 控制视频亮度
                 adjustBrightness(it)
@@ -415,7 +441,7 @@ internal fun PreviewPlayer(
             },
             onHorizontalDragStopped = {
                 hideController(true)
-                if ((contentPercentToDisplay - contentPercent).absoluteValue >= 0.01) {
+                if ((contentPercentToDisplay - contentPercent).absoluteValue >= 0) {
                     playerState.seekTo((contentDuration * contentPercentToDisplay).toLong())
                 }
                 isProgressChanging = false
@@ -507,23 +533,43 @@ internal fun LandscapePlayerTopBar(
     modifier: Modifier = Modifier
 ) {
     val backgroundBrush: Brush = Brush.verticalGradient(listOf(Color.Black, Color.Transparent))
-    Row(
+    var calendar: Calendar by remember { mutableStateOf(Calendar.getInstance()) }
+    val currentTime: String by remember {
+        derivedStateOf {
+            String.format(Locale.CHINA, "%02d:%02d", calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE))
+        }
+    }
+    LaunchedEffect(Unit) {
+        while (true) {
+            calendar = Calendar.getInstance()
+            delay(1_000)
+        }
+    }
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(backgroundBrush)
-            .padding(top = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .background(backgroundBrush),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(
-            modifier = Modifier.windowInsetsStartWidth(
-                WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
-            )
-        )
-        BackButton(onBack = onBack)
         Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium
+            text = currentTime,
+            style = MaterialTheme.typography.titleSmall
         )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Spacer(
+                modifier = Modifier.windowInsetsStartWidth(
+                    WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
+                )
+            )
+            BackButton(onBack = onBack)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
     }
 }
 
@@ -683,7 +729,7 @@ internal fun PreviewDescription(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 style = MaterialTheme.typography.bodyMedium,
                 overflow = TextOverflow.Ellipsis,
-                maxLines = if (expanded) Int.MAX_VALUE else 1
+                maxLines = if (expanded) Int.MAX_VALUE else 5
             )
         }
     }
@@ -834,6 +880,40 @@ fun BrightnessIndicator(
                     modifier = Modifier.weight(1f),
                     color = MaterialTheme.colorScheme.surface,
                     trackColor = MaterialTheme.colorScheme.outline
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FastForwardIndicator(
+    isShow: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.fast_forward))
+    val progress by animateLottieCompositionAsState(composition, iterations = LottieConstants.IterateForever)
+    if (isShow) {
+        Surface(
+            modifier = modifier.wrapContentWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = Color.Black.copy(alpha = 0.3f),
+            contentColor = MaterialTheme.colorScheme.surface
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                LottieAnimation(
+                    composition = composition,
+                    progress = { progress },
+                    modifier = Modifier.size(width = 20.dp, height = 12.dp),
+                    contentScale = ContentScale.FillHeight
+                )
+                Text(
+                    text = stringResource(R.string.fast_forward_playing),
+                    style = MaterialTheme.typography.titleSmall
                 )
             }
         }
