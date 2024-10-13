@@ -1,4 +1,5 @@
 <resources>
+    <string name="art_app_name">𝓠𝓟𝓵𝓪𝔂𝓮𝓻</string>
     <string name="newest_addition">最新添加</string>
     <string name="movie">电影</string>
     <string name="variety_show">综艺</string>

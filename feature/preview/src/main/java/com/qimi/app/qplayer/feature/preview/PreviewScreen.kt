@@ -830,7 +830,7 @@ fun VolumeIndicator(
             modifier = modifier,
             shape = CircleShape,
             color = Color.Black.copy(alpha = 0.3f),
-            contentColor = MaterialTheme.colorScheme.surface
+            contentColor = Color.White
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -846,8 +846,8 @@ fun VolumeIndicator(
                 LinearProgressIndicator(
                     progress = { volumeState.volume },
                     modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.surface,
-                    trackColor = MaterialTheme.colorScheme.outline
+                    color = Color.White,
+                    trackColor = Color.Black.copy(alpha = 0.3f)
                 )
             }
         }
@@ -864,7 +864,7 @@ fun BrightnessIndicator(
             modifier = modifier,
             shape = CircleShape,
             color = Color.Black.copy(alpha = 0.3f),
-            contentColor = MaterialTheme.colorScheme.surface
+            contentColor = Color.White
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -878,8 +878,8 @@ fun BrightnessIndicator(
                 LinearProgressIndicator(
                     progress = { brightnessState.brightness },
                     modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.surface,
-                    trackColor = MaterialTheme.colorScheme.outline
+                    color = Color.White,
+                    trackColor = Color.Black.copy(alpha = 0.3f)
                 )
             }
         }
@@ -898,7 +898,7 @@ fun FastForwardIndicator(
             modifier = modifier.wrapContentWidth(),
             shape = RoundedCornerShape(16.dp),
             color = Color.Black.copy(alpha = 0.3f),
-            contentColor = MaterialTheme.colorScheme.surface
+            contentColor = Color.White
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),

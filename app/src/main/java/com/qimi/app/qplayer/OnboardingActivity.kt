@@ -7,12 +7,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -20,22 +26,34 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.work.WorkManager
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.qimi.app.qplayer.sync.work.initializers.SyncInitializer
 import com.qimi.app.qplayer.ui.theme.QPlayerTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -54,16 +72,12 @@ class OnboardingActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            QPlayerTheme {
+            QPlayerTheme(darkTheme = false) {
                 val background = MaterialTheme.colorScheme.background
-                var shouldEnableEdgeToEdge: Boolean by rememberSaveable(background) { mutableStateOf(true) }
-                if (shouldEnableEdgeToEdge) {
-                    LaunchedEffect(Unit) {
-                        shouldEnableEdgeToEdge = false
-                        enableEdgeToEdge(
-                            navigationBarStyle = SystemBarStyle.light(background.toArgb(), background.toArgb())
-                        )
-                    }
+                LaunchedEffect(background) {
+                    enableEdgeToEdge(
+                        navigationBarStyle = SystemBarStyle.light(background.toArgb(), background.toArgb())
+                    )
                 }
                 OnboardingScreen(
                     onFinished = {
@@ -97,7 +111,7 @@ internal fun OnboardingScreen(
                 WorkManager.getInstance(context)
                     .getWorkInfosForUniqueWorkFlow(SyncInitializer.SYNC_WORK_NAME)
                     .first {
-                        val syncWorkInfo = it.first()
+                        val syncWorkInfo = it.firstOrNull() ?: return@first false
                         syncWorkInfo.runAttemptCount > 1 || syncWorkInfo.state.isFinished
                     }
             }
@@ -107,21 +121,16 @@ internal fun OnboardingScreen(
         }
     }
     Box(modifier = modifier) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 48.dp)
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_launcher_foreground),
-                contentDescription = null,
-                modifier = Modifier.size(48.dp)
-            )
             Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.titleLarge
+                text = stringResource(R.string.art_app_name),
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }
 }
+

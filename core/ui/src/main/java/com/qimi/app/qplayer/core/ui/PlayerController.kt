@@ -82,7 +82,7 @@ fun PlayerController(
     var isVerticalControl: Boolean by remember { mutableStateOf(false) }
     var isLongPress: Boolean by remember { mutableStateOf(false) }
     CompositionLocalProvider(
-        LocalContentColor provides MaterialTheme.colorScheme.surface
+        LocalContentColor provides Color.White
     ) {
         Box(
             modifier = modifier
@@ -265,15 +265,15 @@ fun ProgressBar(
         contentAlignment = Alignment.CenterStart
     ) {
         ProgressBarTrack(
-            color = MaterialTheme.colorScheme.outline,
+            color = LocalContentColor.current.copy(alpha = 0.3f),
             modifier = Modifier.fillMaxWidth()
         )
         ProgressBarTrack(
-            color = MaterialTheme.colorScheme.outlineVariant,
+            color = LocalContentColor.current.copy(alpha = 0.5f),
             modifier = Modifier.fillMaxWidth(contentBufferedPercent)
         )
         ProgressBarTrack(
-            color = MaterialTheme.colorScheme.surface,
+            color = LocalContentColor.current,
             modifier = Modifier.fillMaxWidth(contentPercent)
         )
         ProgressBarThumb(
@@ -347,7 +347,8 @@ private fun ProgressBarThumb(
             modifier = Modifier
                 .size(16.dp)
                 .onSizeChanged { thumbWidth = it.width }
-                .offset { IntOffset(offset.roundToInt(), 0) }
+                .offset { IntOffset(offset.roundToInt(), 0) },
+            tint = LocalContentColor.current
         )
     }
 }

@@ -5,8 +5,4 @@
         <item name="android:windowBackground">@color/backgroundDark</item>
     </style>
 
-    <style name="Theme.Onboarding" parent="Theme.QPlayer.Fullscreen">
-        <item name="android:windowBackground">@color/backgroundDark</item>
-    </style>
-
 </resources>

@@ -45,14 +45,10 @@ class AppState(
     var currentNavigationBarStyle: SystemBarStyle by mutableStateOf(navigationBarStyle)
         private set
 
-    var isBlack: Boolean by mutableStateOf(false)
-        private set
-
     fun setSystemBarStyle(
         statusBarStyle: SystemBarStyle = currentStatusBarStyle,
         navigationBarStyle: SystemBarStyle = currentNavigationBarStyle,
     ) {
-        isBlack = true
         currentStatusBarStyle = statusBarStyle
         currentNavigationBarStyle = navigationBarStyle
     }

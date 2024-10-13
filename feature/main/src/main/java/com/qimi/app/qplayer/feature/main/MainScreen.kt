@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,16 +36,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -58,15 +66,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -77,6 +90,8 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import coil.util.CoilUtils
 import com.qimi.app.qplayer.core.model.data.Movie
+import com.qimi.app.qplayer.core.ui.AppState
+import com.qimi.app.qplayer.core.ui.LocalAppState
 import kotlinx.coroutines.Dispatchers
 
 @Composable
@@ -113,22 +128,37 @@ internal fun MainScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    SearchBarField(
-                        onClick = onSearchMovie,
-                        modifier = Modifier.fillMaxWidth()
+                    Text(
+                        text = stringResource(R.string.art_app_name),
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.displaySmall
                     )
                 },
                 navigationIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_launcher_foreground),
-                        contentDescription = null
-                    )
+                    IconButton(
+                        onClick = {}
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Menu,
+                            contentDescription = null
+                        )
+                    }
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                ),
                 actions = {
-                    Spacer(modifier = Modifier.width(24.dp))
+                    IconButton(onClick = onSearchMovie) {
+                        Icon(
+                            imageVector = Icons.Rounded.Search,
+                            contentDescription = null
+                        )
+                    }
                 }
             )
         },
+        containerColor = Color.Transparent,
         modifier = modifier
     ) {
         val refreshState = rememberPullToRefreshState()
@@ -174,40 +204,6 @@ internal fun MainScreen(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-internal fun SearchBarField(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier,
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Search,
-                contentDescription = null,
-                modifier = Modifier.scale(0.8f)
-            )
-            BasicTextField(
-                value = "",
-                onValueChange = { },
-                enabled = false,
-                modifier = Modifier.padding(vertical = 8.dp),
-                textStyle = TextStyle.Default.copy(color = MaterialTheme.colorScheme.outline),
-                singleLine = true
-            )
-            Spacer(modifier = Modifier.width(8.dp))
         }
     }
 }
@@ -268,7 +264,14 @@ internal fun MoviesSection(
         ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium.copy(
+                    shadow = Shadow(
+                        color = LocalContentColor.current.copy(alpha = 0.3f),
+                        offset = Offset(4f, 4f),
+                        blurRadius = 8f
+                    )
+                ),
+                color = MaterialTheme.colorScheme.onBackground
             )
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -302,14 +305,17 @@ internal fun MovieCard(
             .diskCachePolicy(CachePolicy.ENABLED)
             .build()
     }
-    OutlinedCard(
+    ElevatedCard(
         onClick = onClick,
-        modifier = modifier
+        modifier = modifier,
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = 8.dp
+        )
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.onSurface)
+                .background(MaterialTheme.colorScheme.onBackground)
         ) {
             AsyncImage(
                 model = imageRequest,
@@ -321,26 +327,26 @@ internal fun MovieCard(
                 Surface(
                     modifier = Modifier.align(Alignment.BottomEnd),
                     shape = RoundedCornerShape(8.dp, 0.dp, 0.dp, 0.dp),
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = MaterialTheme.colorScheme.surface
                 ) {
                     Text(
                         text = movie.movieClass,
                         modifier = Modifier.padding(8.dp, 4.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        style = MaterialTheme.typography.bodySmall
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.labelSmall
                     )
                 }
             }
             Surface(
                 modifier = Modifier.wrapContentWidth().align(Alignment.TopStart),
                 shape = RoundedCornerShape(0.dp, 0.dp, 8.dp, 0.dp),
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Text(
                     text = movie.name,
                     modifier = Modifier.padding(8.dp, 4.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
